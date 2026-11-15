@@ -13,7 +13,11 @@ use crate::{
     world::World,
 };
 use serde::{Deserialize, Serialize};
-use std::{fs, path::Path, time::{Duration, Instant}};
+use std::{
+    fs,
+    path::Path,
+    time::{Duration, Instant},
+};
 
 /// The image's side in texels.
 pub const SIZE: usize = 1024;
@@ -438,8 +442,8 @@ impl Minimap {
         })?;
         fs::create_dir_all(parent)?;
         let tiles = self.tiles.iter().map(|(key, tile)| (key, tile)).collect();
-        let bytes = serde_json::to_vec(&Cache { schema: 1, tiles })
-            .map_err(std::io::Error::other)?;
+        let bytes =
+            serde_json::to_vec(&Cache { schema: 1, tiles }).map_err(std::io::Error::other)?;
         let temporary = path.with_extension("json.tmp");
         fs::write(&temporary, bytes)?;
         fs::rename(&temporary, path)?;
