@@ -91,3 +91,5 @@ For every code change:
 - Build/CI: not yet verified for these commits. Do not install an earlier artifact as this update.
 - Device test: pending. Verify restart persistence, separation between singleplayer/server/dimensions, waypoint add/remove/persistence, map quality, pan/zoom, and gameplay input isolation.
 - Remaining waypoint limitation: current first pass auto-names markers and removes only the last marker; rename/select/delete-individual waypoint management is not implemented yet.
+
+- Follow-up source fixes after the first log entry: `641bd654021fdda9dd13c50abf5fb25aff4ef5d2` uses an explicit string slice for the cache-key comparison and avoids moving the waypoint path during the atomic rename; `f30aa07639d7f445780db5ef3a561d5cacaa5e95` adds a disk-cache round-trip unit test; `b105d832c65282838ba595e6f0f7452e5261667b` makes its temporary test filename portable. These are part of the same unverified map-remaster work.
