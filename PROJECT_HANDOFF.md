@@ -182,6 +182,6 @@ User reports explored chunks persist after restarting and map quality is now acc
   - game/extras.rs: tap to position cursor; Add waypoint uses cursor-to-world conversion rather than player position; arrow keys move cursor; Enter activates the control beneath the cursor.
 - Latest verified build before this update: Android run #83 (43735462980), ARM64-v8a APK artifact 14170610432, success. Checks #79 (43735462920) failed only due to rustfmt differences.
 - Workflow run deletion is not available through the current GitHub connection. No historical runs have been deleted. Active workflows remain android.yml, ci.yml, and native-mods.yml.
-- Latest branch head: 8e282c8d69dac644632ab0652e2d56cb1f3b45f2.
+- Latest source-code commit: 8e282c8d69dac644632ab0652e2d56cb1f3b45f2. Latest branch HEAD is documentation-only commit 48f2e0775212f66ca41966b6bac4b62d77dff638.
 - Latest validation: checks #81 (43737709898) in progress and Android #85 (43737709847) pending for the latest SHA. Earlier #80/#84 are still running on the previous cursor commit, not the final code.
 - Next: wait for checks #81 and ARM64 build #85, fix any errors, then device-test cursor placement, buttons, pan/zoom, waypoint persistence, and player-input isolation.
