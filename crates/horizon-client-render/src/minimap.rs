@@ -725,6 +725,36 @@ mod tests {
     }
 
     #[test]
+    fn explored_tiles_survive_a_disk_cache_round_trip() {
+        let mut map = Minimap {
+            palette: Some(palette()),
+            ..Default::default()
+        };
+        let facts = BlockFacts {
+            states: Vec::new(),
+            air: horizon_world::registry::BlockStateId(0),
+            woods: Default::default(),
+        };
+        let world = world_with(vec![grass_chunk(0, 0)]);
+        map.update(&world, &facts, (0, 0), 0, Layer::Surface, Duration::ZERO);
+        assert_eq!(map.tile_count(), 1);
+
+        let path = std::env::temp_dir().join(format!(
+            "starling-minimap-cache-{}-{}.json",
+            std::process::id(),
+            std::thread::current().name().unwrap_or("test")
+        ));
+        let _ = std::fs::remove_file(&path);
+        assert!(map.save_to(&path).unwrap());
+
+        let mut restored = Minimap::default();
+        assert!(restored.load_from(&path).unwrap());
+        assert_eq!(restored.tile_count(), 1);
+        assert!(restored.tiles.contains_key(&(0, 0)));
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
     fn rings_cover_each_offset_once() {
         let mut seen = std::collections::HashSet::new();
         for r in 0..=3 {
