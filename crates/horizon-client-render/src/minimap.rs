@@ -12,8 +12,8 @@ use crate::{
     fast_hash::FxHashMap,
     world::World,
 };
-use std::{fs, path::Path, time::{Duration, Instant}};
 use serde::{Deserialize, Serialize};
+use std::{fs, path::Path, time::{Duration, Instant}};
 
 /// The image's side in texels.
 pub const SIZE: usize = 1024;
