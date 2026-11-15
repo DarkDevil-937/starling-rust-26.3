@@ -15,7 +15,7 @@ use crate::{
 use std::time::{Duration, Instant};
 
 /// The image's side in texels.
-pub const SIZE: usize = 128;
+pub const SIZE: usize = 512;
 /// Marks a column the map cuts through (a wall at the player's height).
 const WALL: u8 = 0x80;
 /// Water's and lava's map colours (`MapColor.WATER`, `FIRE`).
