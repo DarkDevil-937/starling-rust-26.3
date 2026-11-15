@@ -116,6 +116,7 @@ pub fn draw_big_map(
     selected_waypoint: Option<usize>,
     center: (f64, f64),
     zoom: f32,
+    cursor: (f32, f32),
 ) -> [[f32; 4]; 5] {
     batch.fill(atlas, 0.0, 0.0, batch.width, batch.height, BACKGROUND);
     // Fill the landscape viewport without distorting the square terrain
@@ -161,29 +162,17 @@ pub fn draw_big_map(
             u32::MAX,
         );
     }
-    // Polished full-width header and compact footer keep the terrain dominant.
-    batch.fill(atlas, 0.0, 0.0, batch.width, 54.0, 0xD9161B22);
-    batch.fill(atlas, 0.0, 52.0, batch.width, 2.0, 0xFF_65B8E8);
+    // Compact information card on the left; terrain remains edge-to-edge.
+    batch.fill(atlas, 10.0, 10.0, 190.0, 52.0, 0xE0161B22);
+    batch.fill(atlas, 10.0, 10.0, 2.0, 52.0, 0xFF_65B8E8);
+    batch.text(atlas, "WORLD", 20.0, 17.0, rgba(130, 205, 255, 255), true);
+    batch.text(atlas, coords, 20.0, 31.0, rgba(245, 248, 252, 255), true);
     batch.text(
         atlas,
-        "WORLD MAP",
-        16.0,
-        10.0,
-        rgba(130, 205, 255, 255),
-        true,
-    );
-    batch.text(atlas, coords, 16.0, 27.0, rgba(245, 248, 252, 255), true);
-    let footer_y = batch.height - 30.0;
-    batch.fill(atlas, 0.0, footer_y, batch.width, 30.0, 0xD9161B22);
-    batch.text(
-        atlas,
-        &format!(
-            "{} WAYPOINTS  •  DRAG TO PAN  •  W ADD  •  TAP MARKER TO SELECT  •  D DELETE",
-            waypoints.len()
-        ),
-        14.0,
-        footer_y + 10.0,
-        rgba(220, 230, 240, 255),
+        &format!("{} WAYPOINTS", waypoints.len()),
+        20.0,
+        45.0,
+        rgba(190, 205, 220, 255),
         true,
     );
 
@@ -196,7 +185,7 @@ pub fn draw_big_map(
         let y = batch.height * 0.5
             + ((waypoint.z - center.1) / f64::from(zoom) * f64::from(extent)
                 / crate::minimap::SIZE as f64) as f32;
-        if x >= 10.0 && y >= 58.0 && x <= batch.width - 10.0 && y <= batch.height - 34.0 {
+        if x >= 10.0 && y >= 10.0 && x <= batch.width - 10.0 && y <= batch.height - 10.0 {
             let marker = if selected_waypoint == Some(index) {
                 0xFF70D6FF
             } else {
@@ -228,6 +217,28 @@ pub fn draw_big_map(
     draw_map_button(batch, atlas, zoom_out, "-");
     draw_map_button(batch, atlas, add_waypoint, "W");
     draw_map_button(batch, atlas, remove_waypoint, "D");
+
+    // Xaero-style virtual cursor; arrow keys move it and Enter activates controls.
+    let (cursor_x, cursor_y) = cursor;
+    batch.fill(atlas, cursor_x - 10.0, cursor_y - 1.0, 20.0, 2.0, 0xFF_101820);
+    batch.fill(atlas, cursor_x - 1.0, cursor_y - 10.0, 2.0, 20.0, 0xFF_101820);
+    batch.fill(atlas, cursor_x - 8.0, cursor_y - 1.0, 16.0, 1.0, 0xFFFFE17A);
+    batch.fill(atlas, cursor_x - 1.0, cursor_y - 8.0, 1.0, 16.0, 0xFFFFE17A);
+    let extent = batch.width.max(batch.height);
+    let cursor_world_x = center.0
+        + f64::from(cursor_x - batch.width * 0.5) * f64::from(zoom)
+            * crate::minimap::SIZE as f64 / f64::from(extent);
+    let cursor_world_z = center.1
+        + f64::from(cursor_y - batch.height * 0.5) * f64::from(zoom)
+            * crate::minimap::SIZE as f64 / f64::from(extent);
+    batch.text(
+        atlas,
+        &format!("X {:.1}  Z {:.1}", cursor_world_x, cursor_world_z),
+        14.0,
+        batch.height - 18.0,
+        rgba(255, 225, 150, 255),
+        true,
+    );
 
     [close, zoom_in, zoom_out, add_waypoint, remove_waypoint]
 }

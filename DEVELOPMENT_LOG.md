@@ -123,3 +123,13 @@ For every code change:
 ## Map remaster build repair — 2026-11-15
 
 Actions #78 and #82 exposed stale workflow-presence tests after removing upstream-only workflows, plus minimap cache compilation errors. Removed only workflow-presence assertions while retaining functional tests; aligned the runner test with the consolidated single-job checks workflow. Minimap tile arrays now use serde-compatible vectors with 256-entry validation on load; serialized keys are copied to avoid an elided-reference lifetime error. Removed upstream pack-bench and PR-close cleanup workflows; retained Android ARM64 APK, Rust checks, and native-mod builds. Await fresh CI and ARM64 validation.
+
+## 2026-11-15 — Fullscreen map cursor and waypoint placement refinement
+
+- User reports explored chunks persist after restart and map quality is now acceptable; fullscreen UI and waypoint placement still need improvement.
+- Source changes in this update:
+  - crates/horizon-client/src/game/extras.rs: added a virtual map cursor; tapping the map positions it independently of the player. Add waypoint converts cursor screen coordinates back into world X/Z using the map zoom/viewport transform. Arrow keys move the cursor and Enter activates the control under it.
+  - crates/horizon-client/src/extras_hud.rs: replaced the full-width header with a compact left-side WORLD/coordinates/waypoint panel; added a visible crosshair cursor and cursor world-coordinate readout; retained full-screen terrain and right-side map buttons.
+- Build status before this update: Android run #83 (ID 43735462980) succeeded for ARM64-v8a and produced artifact starling-apk-arm64-v8a (artifact 14170610432). Checks run #79 (ID 43735462920) failed only at cargo fmt --check due to formatting in game/extras.rs and minimap.rs; no compilation/tests were reached.
+- The available GitHub connection exposes Actions run/artifact reads and job reruns, but no workflow-run deletion operation. Historical run deletion was not performed.
+- Pending: run rustfmt, inspect cursor/world-coordinate transform, run checks and ARM64 APK workflow, then device-test cursor placement, button activation, and player-input isolation.

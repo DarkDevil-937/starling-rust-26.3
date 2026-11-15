@@ -172,3 +172,14 @@ The failed checks run #72 (SHA `d3eefa4f`) failed in the formatting/lint step du
 ## Workflow/build repair — 2026-11-15
 
 Current workflow set: android.yml (ARM64-v8a only), ci.yml, native-mods.yml. Removed pack-bench.yml (upstream-only benchmark) and cancel-on-close.yml (PR housekeeping not required for the normal build flow). Checks #78 exposed three workflow-presence tests for deleted files and one test requiring three self-hosted jobs despite the consolidated single-job CI design; those assertions now match the retained functional tooling and single-job checks. Android #82 found serde's unsupported 256-element arrays and a missing lifetime in the serialized cache tuple. Tile storage now uses vectors with strict 256-entry validation, and serialized keys are copied. Await fresh CI and ARM64 results before calling this build successful.
+
+## Latest requested map interaction refinement — 2026-11-15
+
+User reports explored chunks persist after restarting and map quality is now acceptable. Remaining requirements: compact left-side world/coordinates panel, waypoint placement anywhere on the map, and a Xaero-like virtual cursor that can navigate the map and activate controls.
+
+- Source update being prepared:
+  - extras_hud.rs: compact left info card; crosshair cursor; cursor world-coordinate readout; fullscreen terrain remains edge-to-edge.
+  - game/extras.rs: tap to position cursor; Add waypoint uses cursor-to-world conversion rather than player position; arrow keys move cursor; Enter activates the control beneath the cursor.
+- Latest verified build before this update: Android run #83 (43735462980), ARM64-v8a APK artifact 14170610432, success. Checks #79 (43735462920) failed only due to rustfmt differences.
+- Workflow run deletion is not available through the current GitHub connection. No historical runs have been deleted. Active workflows remain android.yml, ci.yml, and native-mods.yml.
+- Next: format and compile-check this change, then build ARM64-v8a and device-test cursor placement, buttons, pan/zoom, waypoint persistence, and player input isolation.

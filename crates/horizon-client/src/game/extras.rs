@@ -39,6 +39,8 @@ pub(super) struct ExtrasState {
     map_zoom: f32,
     map_pan: [f64; 2],
     map_drag: Option<(u64, f32, f32)>,
+    /// Virtual map pointer in GUI coordinates, independent of the player.
+    map_cursor: Option<[f32; 2]>,
 }
 /// CPU time the minimap's tiles may take per frame.
 const MINIMAP_BUDGET: Duration = Duration::from_micros(300);
@@ -255,13 +257,55 @@ impl Game<'_> {
         if self.screen != Screen::Playing || self.title.is_some() {
             return false;
         }
+        if self.extras.big_map {
+            let [width, height] = self.touch_size();
+            let scale = HudBatch::new([width, height]).scale;
+            let bounds = [width as f32 / scale, height as f32 / scale];
+            let cursor = self.extras.map_cursor.unwrap_or([bounds[0] * 0.5, bounds[1] * 0.5]);
+            let step = 18.0;
+            let moved = match key {
+                KeyCode::ArrowLeft => Some([cursor[0] - step, cursor[1]]),
+                KeyCode::ArrowRight => Some([cursor[0] + step, cursor[1]]),
+                KeyCode::ArrowUp => Some([cursor[0], cursor[1] - step]),
+                KeyCode::ArrowDown => Some([cursor[0], cursor[1] + step]),
+                _ => None,
+            };
+            if let Some([x, y]) = moved {
+                self.extras.map_cursor = Some([x.clamp(0.0, bounds[0]), y.clamp(0.0, bounds[1])]);
+                return true;
+            }
+            if key == KeyCode::Enter {
+                self.extras.map_cursor = Some(cursor);
+                self.fullscreen_map_touch(
+                    u64::MAX,
+                    winit::event::TouchPhase::Started,
+                    cursor[0] * scale,
+                    cursor[1] * scale,
+                );
+                self.fullscreen_map_touch(
+                    u64::MAX,
+                    winit::event::TouchPhase::Ended,
+                    cursor[0] * scale,
+                    cursor[1] * scale,
+                );
+                return true;
+            }
+            if key == KeyCode::Escape {
+                self.extras.big_map = false;
+                self.extras.map_drag = None;
+                return true;
+            }
+        }
         match key {
             KeyCode::KeyM => {
                 self.extras.big_map = !self.extras.big_map;
+                self.extras.map_cursor = None;
+                self.extras.map_drag = None;
                 true
             }
             KeyCode::Escape if self.extras.big_map => {
                 self.extras.big_map = false;
+                self.extras.map_drag = None;
                 true
             }
             _ => false,
@@ -307,11 +351,29 @@ impl Game<'_> {
                     self.extras.map_zoom = (z / 0.8).clamp(0.125, 64.0);
                 } else if hit(by + 3.0 * (side + 6.0)) {
                     if let Some(player) = self.player.as_ref() {
+                        let cursor = self.extras.map_cursor.unwrap_or([
+                            w as f32 / scale * 0.5,
+                            h as f32 / scale * 0.5,
+                        ]);
+                        let zoom = if self.extras.map_zoom > 0.0 {
+                            self.extras.map_zoom
+                        } else {
+                            DEFAULT_FULLSCREEN_MAP_ZOOM
+                        };
+                        let extent = f64::from(w.max(h) as f32 / scale);
+                        let center_x = player.position.x + self.extras.map_pan[0];
+                        let center_z = player.position.z + self.extras.map_pan[1];
+                        let world_x = center_x
+                            + f64::from(cursor[0] - w as f32 / scale * 0.5)
+                                * f64::from(zoom) * minimap::SIZE as f64 / extent;
+                        let world_z = center_z
+                            + f64::from(cursor[1] - h as f32 / scale * 0.5)
+                                * f64::from(zoom) * minimap::SIZE as f64 / extent;
                         let number = self.extras.map_waypoints.len() + 1;
                         self.extras.map_waypoints.push(extras_hud::MapWaypoint {
                             name: format!("Waypoint {number}"),
-                            x: player.position.x,
-                            z: player.position.z,
+                            x: world_x,
+                            z: world_z,
                         });
                         self.extras.selected_waypoint = Some(self.extras.map_waypoints.len() - 1);
                         self.save_map_waypoints();
@@ -328,6 +390,7 @@ impl Game<'_> {
                     self.extras.selected_waypoint = None;
                     self.save_map_waypoints();
                 } else {
+                    self.extras.map_cursor = Some([x, y]);
                     let zoom = if self.extras.map_zoom > 0.0 {
                         self.extras.map_zoom
                     } else {
@@ -582,6 +645,7 @@ impl Game<'_> {
                     self.extras.selected_waypoint,
                     (view.x, view.z),
                     map_zoom,
+                    self.extras.map_cursor.unwrap_or([batch.width * 0.5, batch.height * 0.5]),
                 );
             } else {
                 extras_hud::draw_minimap(batch, atlas, &mut corners, &look);
