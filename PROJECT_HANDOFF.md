@@ -37,10 +37,10 @@ User says fullscreen map quality/resolution is very low. This is the next priori
 - Do not blindly increase texture size. First trace texture allocation/upload, GPU sampler filtering (nearest/linear), viewport scaling/cropping, and zoom-to-blocks-per-pixel. Determine whether blur comes from source resolution, filtering, or stretching.
 - Target: crisp readable terrain at multiple zoom levels, smooth pan/zoom, and map gestures must not move the player.
 - Balance sharpness against RAM/GPU memory and frame time on POCO F7.
-- No map-quality code change has been committed yet. Investigation confirms the 512×512 image is copied at full declared size into the `horizon/minimap` atlas slot, and `horizon/` sprites are excluded from atlas shrinking. Inspect the standard sampler's default filtering and fullscreen zoom/blocks-per-pixel before editing. Since the map stores one colour per world block, increasing SIZE alone may just display more world rather than improve detail.
+- A first map-quality source change is now committed: `crates/horizon-client/src/game/extras.rs` defines `DEFAULT_FULLSCREEN_MAP_ZOOM = 1.0` and uses it for every fullscreen-map zoom fallback. The previous fallback was 2.0 blocks per pixel, which skipped alternate world blocks and reduced terrain detail. The new default samples one block per map texel without increasing texture size or GPU memory. Build and device test are pending. Investigation confirms the 512×512 image is copied at full declared size into the `horizon/minimap` atlas slot, and `horizon/` sprites are excluded from atlas shrinking. Inspect the standard sampler's default filtering and fullscreen zoom/blocks-per-pixel before editing. Since the map stores one colour per world block, increasing SIZE alone may just display more world rather than improve detail.
 
 ## Current source state
-- Latest known branch HEAD: check GitHub branch `starling` before editing; the latest documentation commit records successful run #27 and the map-quality investigation. Latest source-code commit remains `244385c335043745aa5efdc05d8662ca665e8226`; subsequent commits only add/update documentation.
+- Latest known branch HEAD: check GitHub branch `starling` before editing; the latest documentation commit records successful run #27 and the map-quality investigation. Latest source-code commits: `13cacf9da4c46edf7980ba5214cee7e8b1c35c6d` and follow-up `b121e010167582aee202c7077a848d2484058c79` (fullscreen map default sampling detail). Check branch `starling` for any newer documentation commits.
 - Latest source-code commit message: `Keep explored map chunks after unload`
 - Latest changed source file: `crates/horizon-client-render/src/minimap.rs`
 - Previous map work is already on branch `starling`, including:
@@ -81,8 +81,9 @@ In `crates/horizon-client-render/src/minimap.rs`, `Minimap::update()` previously
 - Texture size 512 is a sampled view of known cached chunk tiles, not a full world reveal.
 - Do not revert earlier map UI/touch changes while working on map quality or tile persistence.
 
-## 2026-11-15 quality investigation
+## 2026-11-15 quality investigation and first fix
 - No source change yet. See `DEVELOPMENT_LOG.md` for details: atlas slot is not intentionally downscaled; map is a per-block colour raster; inspect default sampler and fullscreen zoom/blocks-per-pixel before deciding whether to increase resolution.
+- First fix committed in `13cacf9...` and normalized in `b121e010...`; latest ARM64 CI result and device validation still pending.
 - User has not yet tested a map-quality build.
 
 ## Required next actions
