@@ -38,6 +38,14 @@ Current implementation observations:
 - The map is a block-colour raster: one sampled map colour per world block. Raising texture size alone may simply show more world at the same blocks-per-pixel rather than add detail to each block. The more useful quality control may be fullscreen zoom / blocks-per-pixel and a clear user-facing zoom range.
 - Next: inspect fullscreen zoom state and button step logic; verify map texture UVs and sampler behaviour; then make a measured change that increases visible terrain detail without changing player movement or causing avoidable GPU/CPU cost.
 - Device validation of image quality: pending; user has not yet tested a new quality build.
+## 2026-11-15 — Fullscreen map sampling detail
+
+- Source file: `crates/horizon-client/src/game/extras.rs`.
+- Commits: `13cacf9da4c46edf7980ba5214cee7e8b1c35c6d` (`Improve fullscreen map detail by default`) and `b121e010167582aee202c7077a848d2484058c79` (`Use consistent fullscreen map zoom default`). The second commit ensures every fullscreen-map fallback uses the same constant.
+- Added `DEFAULT_FULLSCREEN_MAP_ZOOM = 1.0` and used it when no zoom has been selected. Previously the fullscreen map defaulted to 2.0 blocks per pixel, sampling every other world block and losing terrain detail. The new default samples one world block per map texel.
+- This does not increase texture size or GPU memory. It shows a closer, more detailed area by default; the existing zoom buttons and pan calculations use the same active zoom value.
+- CI: a new ARM64-v8a workflow is expected from the latest push; record its exact run ID/status after checking. No build success claimed yet.
+- Device test: pending. User must compare map detail and verify zoom/pan do not move the player.
 ## Required validation checklist
 
 For every code change:
