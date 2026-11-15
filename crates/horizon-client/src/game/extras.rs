@@ -12,7 +12,8 @@ use horizon_client::{
     reconnect::{Retry, Tracker},
     title::Mode,
 };
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
+use sha2::Digest;
 use winit::{event::MouseButton, keyboard::KeyCode};
 
 #[derive(Default)]
@@ -24,6 +25,9 @@ pub(super) struct ExtrasState {
     minimap: Minimap,
     /// The dimension the minimap's tiles belong to.
     minimap_dim: Option<Dim>,
+    /// Stable per-save/per-dimension key for disk-backed explored tiles.
+    minimap_cache_key: Option<String>,
+    minimap_last_saved: Option<std::time::Instant>,
     /// Auto-reconnect's attempts at the current server.
     reconnect: Tracker,
     /// Starling: the fullscreen map (the M key) is open.
@@ -39,6 +43,24 @@ const MINIMAP_BUDGET: Duration = Duration::from_micros(300);
 const DEFAULT_FULLSCREEN_MAP_ZOOM: f32 = 0.5;
 
 impl Game<'_> {
+    fn minimap_cache_path(&self) -> Option<PathBuf> {
+        let key = self.extras.minimap_cache_key.as_ref()?;
+        let root = std::env::var_os("HORIZON_PRIVATE")
+            .map(PathBuf::from)
+            .or_else(|| std::env::var_os("HORIZON_HOME").map(PathBuf::from))
+            .or_else(|| std::env::current_dir().ok())?;
+        Some(root.join("map-cache").join(format!("{key}.json")))
+    }
+
+    fn save_minimap_cache(&mut self) {
+        let Some(path) = self.minimap_cache_path() else { return; };
+        if let Err(error) = self.extras.minimap.save_to(&path) {
+            log::warn!("Starling: could not save explored map cache {}: {error}", path.display());
+        } else {
+            self.extras.minimap_last_saved = Some(std::time::Instant::now());
+        }
+    }
+
     fn extras_now(&self) -> f64 {
         self.started.elapsed().as_secs_f64()
     }
@@ -268,16 +290,35 @@ impl Game<'_> {
     /// image when the view or a tile changed, and queue the upload.
     fn update_minimap(&mut self) {
         let Some((_, _, view)) = self.minimap_shown() else {
-            // Keep the explored map cache while the title / server screen is
-            // open. Rejoining the same world can then reuse its explored tiles.
-            // The cache is cleared only when the map is disabled or dimension changes.
+            // Flush explored tiles when leaving a world, so closing the app
+            // immediately afterwards does not discard the latest discoveries.
+            self.save_minimap_cache();
             if self.minimap_wanted().is_none() {
                 self.extras.minimap.clear();
                 self.extras.minimap_dim = None;
+                self.extras.minimap_cache_key = None;
             }
             return;
         };
-        if self.extras.minimap_dim != Some(self.dim) {
+        // world_root distinguishes single-player saves and remote server save roots;
+        // dimension is part of the identity so Nether/Overworld maps never mix.
+        let identity = format!("{}::{:?}", self.world_root.display(), self.dim);
+        let cache_key = format!("{:x}", sha2::Sha256::digest(identity.as_bytes()));
+        if self.extras.minimap_cache_key.as_deref() != Some(&cache_key) {
+            self.save_minimap_cache();
+            self.extras.minimap.clear();
+            self.extras.minimap_dim = Some(self.dim);
+            self.extras.minimap_cache_key = Some(cache_key);
+            self.extras.minimap_last_saved = None;
+            if let Some(path) = self.minimap_cache_path() {
+                match self.extras.minimap.load_from(&path) {
+                    Ok(true) => log::info!("Starling: restored {} explored map chunks", self.extras.minimap.tile_count()),
+                    Ok(false) => {}
+                    Err(error) => log::warn!("Starling: could not load explored map cache {}: {error}", path.display()),
+                }
+            }
+        } else if self.extras.minimap_dim != Some(self.dim) {
+            self.save_minimap_cache();
             self.extras.minimap.clear();
             self.extras.minimap_dim = Some(self.dim);
         }
@@ -304,6 +345,11 @@ impl Game<'_> {
             layer,
             MINIMAP_BUDGET,
         );
+        // Persist at a low frequency while exploring; the title/disconnect path
+        // above performs an immediate final flush.
+        if self.extras.minimap_last_saved.is_none_or(|last| last.elapsed() >= Duration::from_secs(3)) {
+            self.save_minimap_cache();
+        }
         if !self.extras.minimap.compose(view) {
             return;
         }
