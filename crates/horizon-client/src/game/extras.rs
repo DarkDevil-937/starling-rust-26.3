@@ -355,7 +355,8 @@ impl Game<'_> {
                 north,
             };
             if big {
-                let coords = format!("X: {:.1}  Z: {:.1}", view.x, view.z);
+                let (px, pz) = self.player.as_ref().map_or((view.x, view.z), |p| (p.position.x, p.position.z));
+                let coords = format!("X: {:.1}  Z: {:.1}", px, pz);
                 extras_hud::draw_big_map(batch, atlas, &look, &coords);
             } else {
                 extras_hud::draw_minimap(batch, atlas, &mut corners, &look);
