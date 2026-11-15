@@ -147,3 +147,5 @@ The newest source commits on `starling` add disk persistence, waypoint controls,
 3. Once CI succeeds, provide the exact new APK artifact.
 4. Ask the user to test: explore chunks, leave and force-close/reopen Starling, rejoin; verify terrain returns; add/remove waypoints; switch worlds/servers/dimensions; test drag/zoom and confirm player movement is unaffected.
 5. Update this handoff and `DEVELOPMENT_LOG.md` with exact CI run and test outcomes.
+
+- Follow-up source commits: `641bd654021fdda9dd13c50abf5fb25aff4ef5d2` (cache key comparison and safe waypoint-file rename), `f30aa07639d7f445780db5ef3a561d5cacaa5e95` (cache round-trip unit test), and `b105d832c65282838ba595e6f0f7452e5261667b` (portable test filename). These are included in the current branch state; CI still needs to validate them.
