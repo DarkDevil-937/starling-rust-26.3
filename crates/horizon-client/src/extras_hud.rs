@@ -150,7 +150,7 @@ pub fn draw_big_map(
 
     // Waypoint positions use the same world-to-screen transform as the terrain.
     let extent = batch.height.max(batch.width);
-    for waypoint in waypoints {
+    for (index, waypoint) in waypoints.iter().enumerate() {
         let x = batch.width * 0.5
             + ((waypoint.x - center.0) / f64::from(zoom) * f64::from(extent)
                 / crate::minimap::SIZE as f64) as f32;
@@ -158,7 +158,7 @@ pub fn draw_big_map(
             + ((waypoint.z - center.1) / f64::from(zoom) * f64::from(extent)
                 / crate::minimap::SIZE as f64) as f32;
         if x >= 10.0 && y >= 58.0 && x <= batch.width - 10.0 && y <= batch.height - 34.0 {
-            let marker = if selected_waypoint == Some(waypoints.iter().position(|item| std::ptr::eq(item, waypoint)).unwrap_or(usize::MAX)) {
+            let marker = if selected_waypoint == Some(index) {
                 0xFF70D6FF
             } else {
                 0xFFFFC857
