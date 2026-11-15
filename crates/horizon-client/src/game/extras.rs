@@ -28,6 +28,10 @@ pub(super) struct ExtrasState {
     reconnect: Tracker,
     /// Starling: the fullscreen map (the M key) is open.
     big_map: bool,
+    /// Fullscreen map zoom and pan.
+    map_zoom: f32,
+    map_pan: [f64; 2],
+    map_drag: Option<(u64, f32, f32)>,
 }
 /// CPU time the minimap's tiles may take per frame.
 const MINIMAP_BUDGET: Duration = Duration::from_micros(300);
@@ -145,8 +149,8 @@ impl Game<'_> {
         }
         let m = self.minimap_wanted()?;
         let view = View {
-            x: p.position.x,
-            z: p.position.z,
+            x: p.position.x + if self.extras.big_map { self.extras.map_pan[0] } else { 0.0 },
+            z: p.position.z + if self.extras.big_map { self.extras.map_pan[1] } else { 0.0 },
             yaw: self.yaw,
             rotate: m.rotate,
             blocks_per_pixel: m.blocks_per_pixel,
@@ -168,7 +172,7 @@ impl Game<'_> {
         // The fullscreen map (M) shows a wider area, north up.
         Some(if self.extras.big_map {
             NativeMinimap {
-                blocks_per_pixel: 2.0,
+                blocks_per_pixel: if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { 2.0 },
                 rotate: false,
                 round: false,
                 ..map
@@ -193,6 +197,59 @@ impl Game<'_> {
                 true
             }
             _ => false,
+        }
+    }
+    /// Capture Android touches while the fullscreen map is open so they cannot move the player.
+    pub(super) fn fullscreen_map_touch(
+        &mut self,
+        id: u64,
+        phase: winit::event::TouchPhase,
+        px: f32,
+        py: f32,
+    ) -> bool {
+        if !self.extras.big_map || self.screen != Screen::Playing {
+            return false;
+        }
+        let [w, h] = self.touch_size();
+        let scale = HudBatch::new([w, h]).scale;
+        let (x, y) = (px / scale, py / scale);
+        let side = extras_hud::MAP_BTN;
+        let bx = w as f32 / scale - 10.0 - side;
+        let by = 10.0;
+        let hit = |top: f32| x >= bx && x <= bx + side && y >= top && y <= top + side;
+        match phase {
+            winit::event::TouchPhase::Started => {
+                if hit(by) {
+                    self.extras.big_map = false;
+                    self.extras.map_drag = None;
+                } else if hit(by + side + 6.0) {
+                    let z = if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { 2.0 };
+                    self.extras.map_zoom = (z * 0.8).clamp(0.25, 64.0);
+                } else if hit(by + 2.0 * (side + 6.0)) {
+                    let z = if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { 2.0 };
+                    self.extras.map_zoom = (z / 0.8).clamp(0.25, 64.0);
+                } else {
+                    self.extras.map_drag = Some((id, x, y));
+                }
+                true
+            }
+            winit::event::TouchPhase::Moved => {
+                if let Some((finger, ox, oy)) = self.extras.map_drag
+                    && finger == id
+                {
+                    let z = if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { 2.0 };
+                    self.extras.map_pan[0] -= f64::from(x - ox) * f64::from(z);
+                    self.extras.map_pan[1] -= f64::from(y - oy) * f64::from(z);
+                    self.extras.map_drag = Some((id, x, y));
+                }
+                true
+            }
+            winit::event::TouchPhase::Ended | winit::event::TouchPhase::Cancelled => {
+                if self.extras.map_drag.is_some_and(|(finger, _, _)| finger == id) {
+                    self.extras.map_drag = None;
+                }
+                true
+            }
         }
     }
     /// Refresh the minimap's tiles within the frame budget, recompose its
@@ -292,11 +349,7 @@ impl Game<'_> {
             };
             let look = extras_hud::MinimapLook {
                 corner: map_corner,
-                size: if big {
-                    (batch.height - 8.0).min(batch.width - 8.0)
-                } else {
-                    map_size
-                },
+                size: if big { batch.height.max(batch.width) } else { map_size },
                 image,
                 arrow,
                 north,
