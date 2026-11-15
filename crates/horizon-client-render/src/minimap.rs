@@ -12,7 +12,8 @@ use crate::{
     fast_hash::FxHashMap,
     world::World,
 };
-use std::time::{Duration, Instant};
+use std::{fs, path::Path, time::{Duration, Instant}};
+use serde::{Deserialize, Serialize};
 
 /// The image's side in texels.
 pub const SIZE: usize = 512;
@@ -25,7 +26,7 @@ const LAVA: u8 = 4;
 const RESCAN: Duration = Duration::from_secs(1);
 
 /// What the map shows of each column.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Layer {
     /// The top block, as map items show it.
     Surface,
@@ -84,7 +85,7 @@ impl Palette {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 struct Tile {
     /// Map colour id per column (`z * 16 + x`), `| WALL` for cut walls.
     color: [u8; 256],
@@ -93,8 +94,11 @@ struct Tile {
     depth: [u8; 256],
     revision: u64,
     layer: Layer,
+    #[serde(skip, default = "instant_now")]
     scanned: Instant,
 }
+
+fn instant_now() -> Instant { Instant::now() }
 /// `MapItem.update` for one column: the first block with a map colour
 /// going down, the fluid's colour over a fluid unless the block is sturdy on
 /// top (`getCorrectStateForFluidBlock`), and the fluid's depth.
@@ -263,6 +267,8 @@ pub struct Minimap {
     composed: Option<View>,
     /// Tiles changed since the image was composed.
     changed: bool,
+    /// Cached tiles changed since the last successful disk write.
+    persist_dirty: bool,
     /// The composed image, `SIZE` x `SIZE` RGBA.
     pub image: Vec<u8>,
 }
@@ -313,6 +319,7 @@ impl Minimap {
                     t.color != tile.color || t.height != tile.height || t.depth != tile.depth
                 }) {
                     self.changed = true;
+                    self.persist_dirty = true;
                 }
                 self.tiles.insert(key, tile);
                 scanned += 1;
@@ -385,6 +392,56 @@ impl Minimap {
         }
         true
     }
+    /// Load explored tiles for this exact world/dimension. Invalid or old cache files are ignored.
+    pub fn load_from(&mut self, path: &Path) -> std::io::Result<bool> {
+        #[derive(Deserialize)]
+        struct Cache {
+            schema: u32,
+            tiles: Vec<((i32, i32), Tile)>,
+        }
+        let bytes = match fs::read(path) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+            Err(error) => return Err(error),
+        };
+        let cache: Cache = serde_json::from_slice(&bytes)
+            .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))?;
+        if cache.schema != 1 || cache.tiles.len() > 100_000 {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unsupported or oversized minimap cache"));
+        }
+        self.tiles = cache.tiles.into_iter().collect();
+        self.changed = true;
+        self.persist_dirty = false;
+        self.composed = None;
+        self.image.clear();
+        Ok(true)
+    }
+
+    /// Atomically persist all explored tiles. A temporary file prevents a crash
+    /// during writing from corrupting the last complete cache.
+    pub fn save_to(&mut self, path: &Path) -> std::io::Result<bool> {
+        if !self.persist_dirty {
+            return Ok(false);
+        }
+        #[derive(Serialize)]
+        struct Cache<'a> {
+            schema: u32,
+            tiles: Vec<(&(i32, i32), &'a Tile)>,
+        }
+        let parent = path.parent().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, "cache path has no parent")
+        })?;
+        fs::create_dir_all(parent)?;
+        let tiles = self.tiles.iter().map(|(key, tile)| (key, tile)).collect();
+        let bytes = serde_json::to_vec(&Cache { schema: 1, tiles })
+            .map_err(std::io::Error::other)?;
+        let temporary = path.with_extension("json.tmp");
+        fs::write(&temporary, bytes)?;
+        fs::rename(&temporary, path)?;
+        self.persist_dirty = false;
+        Ok(true)
+    }
+
     pub fn tile_count(&self) -> usize {
         self.tiles.len()
     }
