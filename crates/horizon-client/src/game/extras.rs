@@ -72,7 +72,7 @@ impl Game<'_> {
                 .map_err(std::io::Error::other)?;
             let temporary = path.with_extension("waypoints.json.tmp");
             std::fs::write(&temporary, bytes)?;
-            std::fs::rename(temporary, path)
+            std::fs::rename(&temporary, &path)
         }) {
             log::warn!("Starling: could not save map waypoints: {error}");
         }
@@ -334,7 +334,7 @@ impl Game<'_> {
         // dimension is part of the identity so Nether/Overworld maps never mix.
         let identity = format!("{}::{}::{:?}", self.world_root.display(), self.server_address().unwrap_or("singleplayer"), self.dim);
         let cache_key = format!("{:x}", sha2::Sha256::digest(identity.as_bytes()));
-        if self.extras.minimap_cache_key.as_deref() != Some(&cache_key) {
+        if self.extras.minimap_cache_key.as_deref() != Some(cache_key.as_str()) {
             self.save_minimap_cache();
             self.extras.minimap.clear();
             self.extras.minimap_dim = Some(self.dim);
