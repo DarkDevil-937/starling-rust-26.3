@@ -177,9 +177,11 @@ Current workflow set: android.yml (ARM64-v8a only), ci.yml, native-mods.yml. Rem
 
 User reports explored chunks persist after restarting and map quality is now acceptable. Remaining requirements: compact left-side world/coordinates panel, waypoint placement anywhere on the map, and a Xaero-like virtual cursor that can navigate the map and activate controls.
 
-- Source update being prepared:
+- Source changes committed in d3595a395a7746e09bf46c83d924653b9ef7c11d, with follow-up formatting/borrow-safety commit 8e282c8d69dac644632ab0652e2d56cb1f3b45f2:
   - extras_hud.rs: compact left info card; crosshair cursor; cursor world-coordinate readout; fullscreen terrain remains edge-to-edge.
   - game/extras.rs: tap to position cursor; Add waypoint uses cursor-to-world conversion rather than player position; arrow keys move cursor; Enter activates the control beneath the cursor.
 - Latest verified build before this update: Android run #83 (43735462980), ARM64-v8a APK artifact 14170610432, success. Checks #79 (43735462920) failed only due to rustfmt differences.
 - Workflow run deletion is not available through the current GitHub connection. No historical runs have been deleted. Active workflows remain android.yml, ci.yml, and native-mods.yml.
-- Next: format and compile-check this change, then build ARM64-v8a and device-test cursor placement, buttons, pan/zoom, waypoint persistence, and player input isolation.
+- Latest branch head: 8e282c8d69dac644632ab0652e2d56cb1f3b45f2.
+- Latest validation: checks #81 (43737709898) in progress and Android #85 (43737709847) pending for the latest SHA. Earlier #80/#84 are still running on the previous cursor commit, not the final code.
+- Next: wait for checks #81 and ARM64 build #85, fix any errors, then device-test cursor placement, buttons, pan/zoom, waypoint persistence, and player-input isolation.
