@@ -220,3 +220,10 @@ User reports explored chunks persist after restarting and map quality is now acc
 - Removed the unused accessor from `crates/horizon-client/src/game/extras.rs`; no callers were found. This does not change the fullscreen map state machine.
 - Current build is not yet recommended for installation; wait for green checks and a successful ARM64 build on the cleanup commit. Device testing remains outstanding.
 - Historical Actions run deletion remains unavailable through the current GitHub connection.
+
+
+## 2026-11-15 follow-up: repair failed #91/#87 builds
+
+- Failed Android #91 identified the remaining call to removed `fullscreen_map_open()` in `crates/horizon-client/src/game/mobile_controls.rs`. Replaced it with `self.extras.big_map`; the map state is the same field already used by the fullscreen-map implementation.
+- Failed Checks #87 identified an unrelated host-only `unreachable_code` error in `crates/horizon-client-render/src/audio.rs`: without the `audio` feature, `Stream` is `Infallible`, making the successful match arm unreachable. The stream-opening/match path is now compiled only with `feature = "audio"`; no-audio builds initialise `(None, false)`. Audio-enabled Android behaviour is retained.
+- Changes are committed but not yet build-verified. Only install a new ARM64-v8a artifact after the matching Android workflow succeeds and checks are green. Device validation remains outstanding.

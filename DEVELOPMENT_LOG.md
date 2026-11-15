@@ -162,3 +162,11 @@ Actions #78 and #82 exposed stale workflow-presence tests after removing upstrea
 - Checks run #85 (ID 43739638523) passed formatting and Python checks, then failed Rust lint/build because `fullscreen_map_open` in `crates/horizon-client/src/game/extras.rs` was unused under warnings-as-errors. Rust core tests were not reached.
 - Removed the unreferenced accessor rather than suppressing the dead-code lint. The map-open state remains used by the existing map input/touch flow; this deletion only removes the unused getter.
 - Await new checks and ARM64 workflow results for this cleanup commit. The previous APK was built but is not the recommended install until checks are green.
+
+
+## 2026-11-15 — Android map guard and no-audio host lint repair
+
+- Latest prior commit `0ff99a4ac6eeece14045ae6ac8f8e324222d444c` removed the unused `fullscreen_map_open()` accessor but left one Android-only call in `game/mobile_controls.rs`. The ARM64 build correctly failed with E0599 at that call.
+- Replaced that call with the existing state field `self.extras.big_map`, preserving the mobile HUD suppression while the fullscreen map is open.
+- Checks #87 also failed in `horizon-client-render/src/audio.rs`: the host checks build disables the `audio` feature, so `Stream = Infallible` and matching `Ok(v)` is unreachable. Scoped stream opening/matching to `#[cfg(feature = "audio")]` and use `(None, false)` for no-audio builds. Audio-enabled Android builds retain the existing open/fallback behaviour.
+- Updated source only; this commit is **not yet CI-verified** and no APK is ready until Checks and ARM64-v8a Android build both pass.
