@@ -210,3 +210,13 @@ User reports explored chunks persist after restarting and map quality is now acc
 - Checks #85 (ID `43739638523`) passed formatting and Python tests, then failed compiling/linting because `Game::fullscreen_map_open` is only called by the Android touch HUD, which is not compiled in the host checks target; warning is denied as an error. The Android target build #89 succeeded on this source, corroborating the method's Android use.
 - Narrow fix applied: document Android-only use and add `#[allow(dead_code)]` to that one method only. Do not suppress dead-code warnings globally.
 - Wait for checks and ARM64 APK build on the new lint-fix commit before telling the user to install. User device test is still pending.
+
+
+## CI follow-up — unused accessor lint (2026-11-15)
+
+- Latest inspected commit: `842f7c06bf747ff1c9a9ed75b8bc4bc8a801e515`.
+- Android #89 / run ID `43739638532` succeeded; ARM64-only APK artifact `starling-apk-arm64-v8a`, ID `14171568404`. Run: https://github.com/DarkDevil-937/starling-rust-26.3/actions/runs/43739638532
+- Checks #85 / run ID `43739638523` failed during Rust lint/build on `fullscreen_map_open` being unused (warnings-as-errors). Formatting and Python checks had passed; Rust core tests did not run.
+- Removed the unused accessor from `crates/horizon-client/src/game/extras.rs`; no callers were found. This does not change the fullscreen map state machine.
+- Current build is not yet recommended for installation; wait for green checks and a successful ARM64 build on the cleanup commit. Device testing remains outstanding.
+- Historical Actions run deletion remains unavailable through the current GitHub connection.

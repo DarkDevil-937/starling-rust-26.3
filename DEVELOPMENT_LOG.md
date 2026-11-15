@@ -154,3 +154,11 @@ Actions #78 and #82 exposed stale workflow-presence tests after removing upstrea
 - Checks run #85 (ID 43739638523) for commit `842f7c06bf747ff1c9a9ed75b8bc4bc8a801e515` passed rustfmt and repository Python tests, then failed during Rust clippy/compile with `-D dead-code`: `Game::fullscreen_map_open` is referenced by the Android touch HUD but unused in the host CI feature/target configuration.
 - Kept the method for the Android call site and annotated it with a narrowly scoped `#[allow(dead_code)]`, with a comment explaining the target-specific use. No blanket lint suppression.
 - Android run #89 (ID 43739638532) succeeded for ARM64-v8a and built an APK from the same commit, but do not recommend it yet: the checks failed. Await a fresh checks run and a matching successful ARM64 run for this lint fix.
+
+
+## 2026-11-15 — Remove unused fullscreen-map accessor after Checks #85
+
+- Android run #89 (ID 43739638532) succeeded on commit `842f7c06bf747ff1c9a9ed75b8bc4bc8a801e515`; it produced `starling-apk-arm64-v8a` artifact ID `14171568404` (34,456,064 bytes) and symbols artifact ID `14171688053`.
+- Checks run #85 (ID 43739638523) passed formatting and Python checks, then failed Rust lint/build because `fullscreen_map_open` in `crates/horizon-client/src/game/extras.rs` was unused under warnings-as-errors. Rust core tests were not reached.
+- Removed the unreferenced accessor rather than suppressing the dead-code lint. The map-open state remains used by the existing map input/touch flow; this deletion only removes the unused getter.
+- Await new checks and ARM64 workflow results for this cleanup commit. The previous APK was built but is not the recommended install until checks are green.
