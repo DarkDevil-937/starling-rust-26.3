@@ -97,3 +97,5 @@ For every code change:
 - Waypoint interaction follow-up: `edd7986391bdf8dfe6d9efefdfadbbd0d23562cf`, `17cc3e7407dd2235c9ca9aed17c03af12153e48b`, and `2e87e1ec1ecc4b9d65421ff6e72dfa89f40b753d` add tap-to-select waypoint markers, highlight the selected marker, and make D delete the selected marker (or the last marker if none is selected). Waypoints remain automatically named in this first pass.
 
 - Final source-format follow-ups: `116c662fb9dabd0d6b7e14a2a26e36024787078b`, `203aaa70efeb6f845333b092dad847407fb163fb`, `7cf868d9c255ad24d836bfa47cf5d13f2b0cabce`, `83837928fb9bbac20a8224b91da9171b39a06599`, and `bdd807d3ada5acc91316937855589956763b74f7` format the map interaction/cache code and order imports. These do not change the intended feature behavior.
+
+- Zoom range follow-up: `51bbb7962e36a98c76c4e568431a960a8018e2da` keeps zoom-out's lower clamp aligned with the finer 0.125 blocks-per-texel minimum, avoiding a jump when zooming back out from the closest setting.
