@@ -35,6 +35,8 @@ pub(super) struct ExtrasState {
 }
 /// CPU time the minimap's tiles may take per frame.
 const MINIMAP_BUDGET: Duration = Duration::from_micros(300);
+/// One world block per fullscreen map texel gives the map its native detail.
+const DEFAULT_FULLSCREEN_MAP_ZOOM: f32 = 1.0;
 
 impl Game<'_> {
     fn extras_now(&self) -> f64 {
@@ -172,7 +174,7 @@ impl Game<'_> {
         // The fullscreen map (M) shows a wider area, north up.
         Some(if self.extras.big_map {
             NativeMinimap {
-                blocks_per_pixel: if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { 2.0 },
+                blocks_per_pixel: if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { DEFAULT_FULLSCREEN_MAP_ZOOM },
                 rotate: false,
                 round: false,
                 ..map
@@ -227,7 +229,7 @@ impl Game<'_> {
                     self.extras.big_map = false;
                     self.extras.map_drag = None;
                 } else if hit(by + side + 6.0) {
-                    let z = if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { 2.0 };
+                    let z = if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { DEFAULT_FULLSCREEN_MAP_ZOOM };
                     self.extras.map_zoom = (z * 0.8).clamp(0.25, 64.0);
                 } else if hit(by + 2.0 * (side + 6.0)) {
                     let z = if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { 2.0 };
