@@ -56,6 +56,11 @@ pub struct MinimapLook {
     pub arrow: f32,
     pub north: Option<(f32, f32)>,
 }
+
+/// Starling big-map overlay: button size and the three button rects returned
+/// so touches can hit-test them (X close, + zoom in, - zoom out).
+pub const MAP_BTN: f32 = 36.0;
+
 pub fn draw_minimap(
     batch: &mut HudBatch,
     atlas: &HudAtlas,
@@ -66,12 +71,48 @@ pub fn draw_minimap(
     draw_map_at(batch, atlas, look, (x, y), 4.0);
 }
 
-/// Starling: the fullscreen map (the M key), centred over a dimmed screen.
-pub fn draw_big_map(batch: &mut HudBatch, atlas: &HudAtlas, look: &MinimapLook) {
+/// Starling: the fullscreen map (the M key), centred over a dimmed screen,
+/// with Xaero-style close / zoom buttons and coordinates.
+/// Returns the three button rects `[x, y, w, h]`: close, zoom-in, zoom-out.
+pub fn draw_big_map(
+    batch: &mut HudBatch,
+    atlas: &HudAtlas,
+    look: &MinimapLook,
+    coords: &str,
+) -> [[f32; 4]; 3] {
     batch.fill(atlas, 0.0, 0.0, batch.width, batch.height, BACKGROUND);
     let x = (batch.width - look.size) / 2.0;
     let y = (batch.height - look.size) / 2.0;
     draw_map_at(batch, atlas, look, (x, y), 8.0);
+
+    // Coordinates under the map (Xaero style).
+    let tw = HudBatch::text_width(atlas, coords);
+    let cx = (batch.width - tw) / 2.0;
+    let cy = y + look.size + 6.0;
+    batch.text(atlas, coords, cx.round(), cy.round(), rgba(255, 255, 255, 255), true);
+
+    // Buttons: top-right X, then + and - below it.
+    let pad = 8.0;
+    let bx = batch.width - pad - MAP_BTN;
+    let close = [bx, pad, MAP_BTN, MAP_BTN];
+    let zoom_in = [bx, pad + MAP_BTN + 6.0, MAP_BTN, MAP_BTN];
+    let zoom_out = [bx, pad + 2.0 * (MAP_BTN + 6.0), MAP_BTN, MAP_BTN];
+
+    draw_map_button(batch, atlas, close, "X");
+    draw_map_button(batch, atlas, zoom_in, "+");
+    draw_map_button(batch, atlas, zoom_out, "-");
+
+    [close, zoom_in, zoom_out]
+}
+
+fn draw_map_button(batch: &mut HudBatch, atlas: &HudAtlas, r: [f32; 4], label: &str) {
+    let [x, y, w, h] = r;
+    batch.fill(atlas, x, y, w, h, 0xCC_1A1A1A);
+    batch.fill(atlas, x + 1.0, y + 1.0, w - 2.0, h - 2.0, 0xCC_3A3A3A);
+    let tw = HudBatch::text_width(atlas, label);
+    let tx = x + (w - tw) / 2.0;
+    let ty = y + (h - 8.0) / 2.0 - 1.0;
+    batch.text(atlas, label, tx.round(), ty.round(), rgba(255, 255, 255, 255), true);
 }
 
 /// The map image at `(x, y)` with the player arrow (`h` GUI pixels from its
@@ -157,6 +198,4 @@ mod tests {
         assert_eq!(c.place(Corner::TopRight, 50.0, 12.0), (348.0, 28.0));
         assert_eq!(c.place(Corner::BottomRight, 50.0, 12.0), (348.0, 286.0));
         assert_eq!(c.place(Corner::BottomRight, 50.0, 10.0), (348.0, 274.0));
-        assert_eq!(c.place(Corner::BottomLeft, 10.0, 10.0), (2.0, 288.0));
-    }
-}
+        assert_
