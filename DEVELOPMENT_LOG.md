@@ -93,3 +93,5 @@ For every code change:
 - Remaining waypoint limitation: current first pass auto-names markers and removes only the last marker; rename/select/delete-individual waypoint management is not implemented yet.
 
 - Follow-up source fixes after the first log entry: `641bd654021fdda9dd13c50abf5fb25aff4ef5d2` uses an explicit string slice for the cache-key comparison and avoids moving the waypoint path during the atomic rename; `f30aa07639d7f445780db5ef3a561d5cacaa5e95` adds a disk-cache round-trip unit test; `b105d832c65282838ba595e6f0f7452e5261667b` makes its temporary test filename portable. These are part of the same unverified map-remaster work.
+
+- Waypoint interaction follow-up: `edd7986391bdf8dfe6d9efefdfadbbd0d23562cf`, `17cc3e7407dd2235c9ca9aed17c03af12153e48b`, and `2e87e1ec1ecc4b9d65421ff6e72dfa89f40b753d` add tap-to-select waypoint markers, highlight the selected marker, and make D delete the selected marker (or the last marker if none is selected). Waypoints remain automatically named in this first pass.
