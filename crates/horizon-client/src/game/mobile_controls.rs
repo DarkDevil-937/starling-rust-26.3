@@ -113,7 +113,10 @@ impl Game<'_> {
                 }
                 return true;
             }
-            if self.mobile.controls.editor.is_some() {
+            if self.fullscreen_map_touch(t.id, t.phase, t.location.x as f32, t.location.y as f32) {
+            return;
+        }
+        if self.mobile.controls.editor.is_some() {
                 self.mobile.controls.request_editor_back();
                 return true;
             }
