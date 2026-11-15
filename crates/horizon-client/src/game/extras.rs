@@ -151,6 +151,8 @@ impl Game<'_> {
         }
         let m = self.minimap_wanted()?;
         let view = View {
+            // The terrain view pans independently; the player marker is offset
+            // in the HUD by the inverse of this displacement.
             x: p.position.x + if self.extras.big_map { self.extras.map_pan[0] } else { 0.0 },
             z: p.position.z + if self.extras.big_map { self.extras.map_pan[1] } else { 0.0 },
             yaw: self.yaw,
@@ -266,7 +268,10 @@ impl Game<'_> {
     /// image when the view or a tile changed, and queue the upload.
     fn update_minimap(&mut self) {
         let Some((_, _, view)) = self.minimap_shown() else {
-            if self.minimap_wanted().is_none() || self.player.is_none() {
+            // Keep the explored map cache while the title / server screen is
+            // open. Rejoining the same world can then reuse its explored tiles.
+            // The cache is cleared only when the map is disabled or dimension changes.
+            if self.minimap_wanted().is_none() {
                 self.extras.minimap.clear();
                 self.extras.minimap_dim = None;
             }
@@ -357,12 +362,29 @@ impl Game<'_> {
             } else {
                 (180.0 + view.yaw, None)
             };
+            let map_zoom = if self.extras.map_zoom > 0.0 {
+                self.extras.map_zoom
+            } else {
+                DEFAULT_FULLSCREEN_MAP_ZOOM
+            };
+            let map_extent = batch.height.max(batch.width);
+            let player_offset = if big {
+                (
+                    (-self.extras.map_pan[0] / f64::from(map_zoom)
+                        * f64::from(map_extent) / minimap::SIZE as f64) as f32,
+                    (-self.extras.map_pan[1] / f64::from(map_zoom)
+                        * f64::from(map_extent) / minimap::SIZE as f64) as f32,
+                )
+            } else {
+                (0.0, 0.0)
+            };
             let look = extras_hud::MinimapLook {
                 corner: map_corner,
-                size: if big { batch.height.max(batch.width) } else { map_size },
+                size: if big { map_extent } else { map_size },
                 image,
                 arrow,
                 north,
+                player_offset,
             };
             if big {
                 let (px, pz) = self.player.as_ref().map_or((view.x, view.z), |p| (p.position.x, p.position.z));
