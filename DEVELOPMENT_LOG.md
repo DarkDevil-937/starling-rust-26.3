@@ -101,3 +101,18 @@ For every code change:
 - Zoom range follow-up: `51bbb7962e36a98c76c4e568431a960a8018e2da` keeps zoom-out's lower clamp aligned with the finer 0.125 blocks-per-texel minimum, avoiding a jump when zooming back out from the closest setting.
 
 - Rustfmt follow-up: `fc2f64a0607276413c2af18f415bee7421a856b7` expands the cache timestamp helper to standard Rust formatting. This is formatting-only.
+
+ 
+## 2026-11-15 — Remove upstream-only GitHub Actions workflows
+
+- Removed seven workflows that are explicitly scoped to the upstream `horizon-rust/horizon` repository or its `main` branch and do not provide Starling ARM64 APK builds or checks on this fork's `starling` branch:
+  - `.github/workflows/claim-command.yml`
+  - `.github/workflows/mod-registry.yml`
+  - `.github/workflows/mojang-republish.yml`
+  - `.github/workflows/native-hook-stamp.yml`
+  - `.github/workflows/overlap-note.yml`
+  - `.github/workflows/parity-main.yml`
+  - `.github/workflows/pr-labels.yml`
+- Kept `android.yml` (ARM64 APK build), `ci.yml` (Rust checks), `cancel-on-close.yml` (cancel abandoned PR runs), `native-mods.yml` (native mod builds), and `pack-bench.yml` (manual/resource-pack benchmark).
+- No workflow artifacts or build history were deleted; this change only removes unused workflow definitions.
+- A push to `starling` will trigger the retained Android and checks workflows. Confirm both finish successfully before downloading a new APK.

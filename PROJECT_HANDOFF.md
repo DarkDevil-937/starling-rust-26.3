@@ -157,3 +157,8 @@ The newest source commits on `starling` add disk persistence, waypoint controls,
 - Zoom-range follow-up: `51bbb7962e36a98c76c4e568431a960a8018e2da` aligns the zoom-out minimum with the zoom-in minimum (0.125 blocks per texel).
 
 - Rustfmt follow-up: `fc2f64a0607276413c2af18f415bee7421a856b7` formats the cache timestamp helper; validation remains pending.
+
+ 
+## Workflow cleanup — 2026-11-15
+
+Removed seven upstream-only workflows whose triggers/guards target `horizon-rust/horizon` or `main`, not this Starling fork's active `starling` branch. Kept the Android ARM64 APK workflow, Rust checks, PR cancellation helper, native-mod build workflow, and manual pack benchmark. See `DEVELOPMENT_LOG.md` for the exact file list. This does not delete historical Actions runs or artifacts.
