@@ -68,14 +68,22 @@ pub fn draw_big_map(
     coords: &str,
 ) -> [[f32; 4]; 3] {
     batch.fill(atlas, 0.0, 0.0, batch.width, batch.height, BACKGROUND);
-    let x = (batch.width - look.size) / 2.0;
-    let y = (batch.height - look.size) / 2.0;
-    draw_map_at(batch, atlas, look, (x, y), 8.0);
-
-    let tw = HudBatch::text_width(atlas, coords);
-    let cx = (batch.width - tw) / 2.0;
-    let cy = y + look.size + 6.0;
-    batch.text(atlas, coords, cx.round(), cy.round(), rgba(255, 255, 255, 255), true);
+    // Full viewport map, rather than the old centered square.
+    batch.rect_uv(0.0, 0.0, batch.width, batch.height, look.image, u32::MAX);
+    let (cx, cy) = (batch.width / 2.0, batch.height / 2.0);
+    if let Some(r) = atlas.sprites.get("map/decorations/player").copied() {
+        let (s, c) = (look.arrow + 180.0).to_radians().sin_cos();
+        let half = 9.0;
+        let p = |dx: f32, dy: f32| [cx + dx * c - dy * s, cy + dx * s + dy * c];
+        batch.quad(
+            [p(-half, half), p(half, half), p(half, -half), p(-half, -half)],
+            [[r.u0, r.v0], [r.u1, r.v0], [r.u1, r.v1], [r.u0, r.v1]],
+            u32::MAX,
+        );
+    }
+    let pad = 10.0;
+    batch.fill(atlas, pad, pad, HudBatch::text_width(atlas, coords) + 12.0, 20.0, BACKGROUND);
+    batch.text(atlas, coords, pad + 6.0, pad + 6.0, rgba(255, 255, 255, 255), true);
 
     let pad = 8.0;
     let bx = batch.width - pad - MAP_BTN;
