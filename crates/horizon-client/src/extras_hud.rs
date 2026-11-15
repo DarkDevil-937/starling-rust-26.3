@@ -58,7 +58,23 @@ pub fn draw_minimap(
     look: &MinimapLook,
 ) {
     let (x, y) = corners.place(look.corner, look.size, look.size);
+    // Framed, pixel-style minimap panel inspired by classic Minecraft map mods.
+    batch.fill(atlas, x - 3.0, y - 3.0, look.size + 6.0, look.size + 6.0, 0xFF_101010);
+    batch.fill(atlas, x - 2.0, y - 2.0, look.size + 4.0, look.size + 4.0, 0xFF_C8C8C8);
+    batch.fill(atlas, x - 1.0, y - 1.0, look.size + 2.0, look.size + 2.0, 0xFF_303030);
     draw_map_at(batch, atlas, look, (x, y), 4.0);
+    if look.north.is_none() {
+        let (cx, cy) = (x + look.size / 2.0, y + look.size / 2.0);
+        let color = rgba(255, 255, 255, 230);
+        for (label, tx, ty) in [
+            ("N", cx - 2.0, y + 2.0),
+            ("E", x + look.size - 8.0, cy - 4.0),
+            ("S", cx - 2.0, y + look.size - 9.0),
+            ("W", x + 2.0, cy - 4.0),
+        ] {
+            batch.text(atlas, label, tx.round(), ty.round(), color, true);
+        }
+    }
 }
 
 pub fn draw_big_map(
