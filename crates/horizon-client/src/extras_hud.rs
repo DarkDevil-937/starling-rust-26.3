@@ -92,6 +92,7 @@ pub fn draw_big_map(
     look: &MinimapLook,
     coords: &str,
     waypoints: &[MapWaypoint],
+    selected_waypoint: Option<usize>,
     center: (f64, f64),
     zoom: f32,
 ) -> [[f32; 4]; 5] {
@@ -140,7 +141,7 @@ pub fn draw_big_map(
     batch.fill(atlas, 0.0, footer_y, batch.width, 30.0, 0xD9161B22);
     batch.text(
         atlas,
-        &format!("{} WAYPOINTS  •  DRAG TO PAN  •  W ADD  •  D REMOVE LAST", waypoints.len()),
+        &format!("{} WAYPOINTS  •  DRAG TO PAN  •  W ADD  •  TAP MARKER TO SELECT  •  D DELETE", waypoints.len()),
         14.0,
         footer_y + 10.0,
         rgba(220, 230, 240, 255),
@@ -157,7 +158,12 @@ pub fn draw_big_map(
             + ((waypoint.z - center.1) / f64::from(zoom) * f64::from(extent)
                 / crate::minimap::SIZE as f64) as f32;
         if x >= 10.0 && y >= 58.0 && x <= batch.width - 10.0 && y <= batch.height - 34.0 {
-            batch.fill(atlas, x - 5.0, y - 5.0, 10.0, 10.0, 0xFFFFC857);
+            let marker = if selected_waypoint == Some(waypoints.iter().position(|item| std::ptr::eq(item, waypoint)).unwrap_or(usize::MAX)) {
+                0xFF70D6FF
+            } else {
+                0xFFFFC857
+            };
+            batch.fill(atlas, x - 5.0, y - 5.0, 10.0, 10.0, marker);
             batch.fill(atlas, x - 1.0, y - 1.0, 2.0, 2.0, 0xFF202020);
             batch.text(atlas, &waypoint.name, x + 8.0, y - 4.0, rgba(255, 230, 160, 255), true);
         }
