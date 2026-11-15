@@ -330,6 +330,9 @@ impl Game<'_> {
     }
     pub(in crate::game) fn mobile_draw(&self, b: &mut HudBatch) {
         use horizon_client::android_control_ui as ui;
+        if self.extras.big_map {
+            return;
+        }
         if !self.has_touch()
             && !self.settings.keypad.enabled
             && self.mobile.controls.editor.is_none()
