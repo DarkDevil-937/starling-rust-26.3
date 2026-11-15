@@ -72,7 +72,9 @@ impl Game<'_> {
     }
 
     fn save_map_waypoints(&self) {
-        let Some(path) = self.minimap_cache_path() else { return; };
+        let Some(path) = self.minimap_cache_path() else {
+            return;
+        };
         let path = path.with_extension("waypoints.json");
         let Some(parent) = path.parent() else {
             return;
@@ -636,6 +638,10 @@ impl Game<'_> {
                     .as_ref()
                     .map_or((view.x, view.z), |p| (p.position.x, p.position.z));
                 let coords = format!("X: {:.1}  Z: {:.1}", px, pz);
+                let map_cursor = self
+                    .extras
+                    .map_cursor
+                    .unwrap_or([batch.width * 0.5, batch.height * 0.5]);
                 extras_hud::draw_big_map(
                     batch,
                     atlas,
@@ -645,7 +651,7 @@ impl Game<'_> {
                     self.extras.selected_waypoint,
                     (view.x, view.z),
                     map_zoom,
-                    self.extras.map_cursor.unwrap_or([batch.width * 0.5, batch.height * 0.5]),
+                    (map_cursor[0], map_cursor[1]),
                 );
             } else {
                 extras_hud::draw_minimap(batch, atlas, &mut corners, &look);

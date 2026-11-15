@@ -418,8 +418,13 @@ impl Minimap {
                 "unsupported or oversized minimap cache",
             ));
         }
-        if cache.tiles.iter().any(|(_, tile)| tile.color.len() != 256 || tile.height.len() != 256 || tile.depth.len() != 256) {
-            return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid minimap tile dimensions"));
+        if cache.tiles.iter().any(|(_, tile)| {
+            tile.color.len() != 256 || tile.height.len() != 256 || tile.depth.len() != 256
+        }) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "invalid minimap tile dimensions",
+            ));
         }
         self.tiles = cache.tiles.into_iter().collect();
         self.changed = true;
