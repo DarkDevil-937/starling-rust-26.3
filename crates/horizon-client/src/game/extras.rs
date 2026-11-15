@@ -217,8 +217,9 @@ impl Game<'_> {
         let scale = HudBatch::new([w, h]).scale;
         let (x, y) = (px / scale, py / scale);
         let side = extras_hud::MAP_BTN;
-        let bx = w as f32 / scale - 10.0 - side;
-        let by = 10.0;
+        let pad = 8.0;
+        let bx = w as f32 / scale - pad - side;
+        let by = pad;
         let hit = |top: f32| x >= bx && x <= bx + side && y >= top && y <= top + side;
         match phase {
             winit::event::TouchPhase::Started => {
@@ -241,8 +242,12 @@ impl Game<'_> {
                     && finger == id
                 {
                     let z = if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { 2.0 };
-                    self.extras.map_pan[0] -= f64::from(x - ox) * f64::from(z);
-                    self.extras.map_pan[1] -= f64::from(y - oy) * f64::from(z);
+                    // The square source texture is cover-scaled to the viewport.
+                    // Convert screen drag distance back to world blocks.
+                    let viewport = f64::from(w.max(h) as f32 / scale);
+                    let blocks_per_gui_pixel = f64::from(z) * minimap::SIZE as f64 / viewport;
+                    self.extras.map_pan[0] -= f64::from(x - ox) * blocks_per_gui_pixel;
+                    self.extras.map_pan[1] -= f64::from(y - oy) * blocks_per_gui_pixel;
                     self.extras.map_drag = Some((id, x, y));
                 }
                 true
