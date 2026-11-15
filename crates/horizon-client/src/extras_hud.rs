@@ -47,6 +47,8 @@ pub struct MinimapLook {
     pub image: Rect,
     pub arrow: f32,
     pub north: Option<(f32, f32)>,
+    /// Screen-space displacement of the real player marker from map centre.
+    pub player_offset: (f32, f32),
 }
 
 pub const MAP_BTN: f32 = 36.0;
@@ -101,8 +103,15 @@ pub fn draw_big_map(
         image.u1 -= span * crop;
     }
     batch.rect_uv(0.0, 0.0, batch.width, batch.height, image, u32::MAX);
-    let (cx, cy) = (batch.width / 2.0, batch.height / 2.0);
-    if let Some(r) = atlas.sprites.get("map/decorations/player").copied() {
+    let (cx, cy) = (
+        batch.width / 2.0 + look.player_offset.0,
+        batch.height / 2.0 + look.player_offset.1,
+    );
+    // Keep the player marker tied to the real player position while the map
+    // is dragged underneath it. Hide it when the player is outside the view.
+    if cx >= 12.0 && cy >= 12.0 && cx <= batch.width - 12.0 && cy <= batch.height - 12.0
+        && let Some(r) = atlas.sprites.get("map/decorations/player").copied()
+    {
         let (s, c) = (look.arrow + 180.0).to_radians().sin_cos();
         let half = 9.0;
         let p = |dx: f32, dy: f32| [cx + dx * c - dy * s, cy + dx * s + dy * c];
@@ -112,9 +121,13 @@ pub fn draw_big_map(
             u32::MAX,
         );
     }
-    let pad = 10.0;
-    batch.fill(atlas, pad, pad, HudBatch::text_width(atlas, coords) + 12.0, 20.0, BACKGROUND);
-    batch.text(atlas, coords, pad + 6.0, pad + 6.0, rgba(255, 255, 255, 255), true);
+    // Compact information strip: readable coordinates without covering the map.
+    let pad = 12.0;
+    let info_w = (HudBatch::text_width(atlas, coords).max(82.0) + 18.0).min(batch.width - 104.0);
+    batch.fill(atlas, pad, pad, info_w, 38.0, 0xD9161B22);
+    batch.fill(atlas, pad, pad, 2.0, 38.0, 0xFF_65B8E8);
+    batch.text(atlas, "WORLD MAP", pad + 9.0, pad + 5.0, rgba(130, 205, 255, 255), true);
+    batch.text(atlas, coords, pad + 9.0, pad + 19.0, rgba(245, 248, 252, 255), true);
 
     let pad = 8.0;
     let bx = batch.width - pad - MAP_BTN;
@@ -131,16 +144,16 @@ pub fn draw_big_map(
 
 fn draw_map_button(batch: &mut HudBatch, atlas: &HudAtlas, r: [f32; 4], label: &str) {
     let [x, y, w, h] = r;
-    // Raised pixel-style control: dark outline, light top edge and inset face.
-    batch.fill(atlas, x, y, w, h, 0xFF_101010);
-    batch.fill(atlas, x + 1.0, y + 1.0, w - 2.0, h - 2.0, 0xFF_B8B8B8);
-    batch.fill(atlas, x + 3.0, y + 3.0, w - 6.0, h - 6.0, 0xFF_454545);
-    batch.fill(atlas, x + 3.0, y + 3.0, w - 6.0, 2.0, 0xFF_777777);
-    batch.fill(atlas, x + 3.0, y + h - 5.0, w - 6.0, 2.0, 0xFF_252525);
+    // Flat translucent controls with a fine outline; no chunky bevels.
+    batch.fill(atlas, x, y, w, h, 0xD91A222C);
+    batch.fill(atlas, x, y, w, 1.0, 0xFF_8A9AAA);
+    batch.fill(atlas, x, y + h - 1.0, w, 1.0, 0xFF_8A9AAA);
+    batch.fill(atlas, x, y, 1.0, h, 0xFF_8A9AAA);
+    batch.fill(atlas, x + w - 1.0, y, 1.0, h, 0xFF_8A9AAA);
     let tw = HudBatch::text_width(atlas, label);
     let tx = x + (w - tw) / 2.0;
     let ty = y + (h - 8.0) / 2.0 - 1.0;
-    batch.text(atlas, label, tx.round(), ty.round(), rgba(255, 255, 255, 255), true);
+    batch.text(atlas, label, tx.round(), ty.round(), rgba(245, 248, 252, 255), true);
 }
 
 fn draw_map_at(
