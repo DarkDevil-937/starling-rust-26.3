@@ -12,8 +12,8 @@ use horizon_client::{
     reconnect::{Retry, Tracker},
     title::Mode,
 };
-use std::{path::PathBuf, time::Duration};
 use sha2::Digest;
+use std::{path::PathBuf, time::Duration};
 use winit::{event::MouseButton, keyboard::KeyCode};
 
 #[derive(Default)]
@@ -216,7 +216,11 @@ impl Game<'_> {
         // The fullscreen map (M) shows a wider area, north up.
         Some(if self.extras.big_map {
             NativeMinimap {
-                blocks_per_pixel: if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { DEFAULT_FULLSCREEN_MAP_ZOOM },
+                blocks_per_pixel: if self.extras.map_zoom > 0.0 {
+                    self.extras.map_zoom
+                } else {
+                    DEFAULT_FULLSCREEN_MAP_ZOOM
+                },
                 rotate: false,
                 round: false,
                 ..map
@@ -271,7 +275,11 @@ impl Game<'_> {
                     self.extras.big_map = false;
                     self.extras.map_drag = None;
                 } else if hit(by + side + 6.0) {
-                    let z = if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { DEFAULT_FULLSCREEN_MAP_ZOOM };
+                    let z = if self.extras.map_zoom > 0.0 {
+                        self.extras.map_zoom
+                    } else {
+                        DEFAULT_FULLSCREEN_MAP_ZOOM
+                    };
                     self.extras.map_zoom = (z * 0.8).clamp(0.125, 64.0);
                 } else if hit(by + 2.0 * (side + 6.0)) {
                     let z = if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { DEFAULT_FULLSCREEN_MAP_ZOOM };
@@ -297,19 +305,32 @@ impl Game<'_> {
                     self.extras.selected_waypoint = None;
                     self.save_map_waypoints();
                 } else {
-                    let zoom = if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { DEFAULT_FULLSCREEN_MAP_ZOOM };
+                    let zoom = if self.extras.map_zoom > 0.0 {
+                        self.extras.map_zoom
+                    } else {
+                        DEFAULT_FULLSCREEN_MAP_ZOOM
+                    };
                     let extent = f64::from(w.max(h) as f32 / scale);
                     let center = self.player.as_ref().map(|player| (
                         player.position.x + self.extras.map_pan[0],
                         player.position.z + self.extras.map_pan[1],
                     ));
-                    let selected = center.and_then(|center| self.extras.map_waypoints.iter().enumerate().rev().find_map(|(index, waypoint)| {
+                    let selected = center.and_then(|center| {
+                        self.extras
+                            .map_waypoints
+                            .iter()
+                            .enumerate()
+                            .rev()
+                            .find_map(|(index, waypoint)| {
                         let wx = f64::from(w as f32 / scale * 0.5)
                             + (waypoint.x - center.0) / f64::from(zoom) * extent / minimap::SIZE as f64;
                         let wy = f64::from(h as f32 / scale * 0.5)
                             + (waypoint.z - center.1) / f64::from(zoom) * extent / minimap::SIZE as f64;
-                        ((wx - f64::from(x)).abs() <= 14.0 && (wy - f64::from(y)).abs() <= 14.0).then_some(index)
-                    }));
+                                ((wx - f64::from(x)).abs() <= 14.0
+                                    && (wy - f64::from(y)).abs() <= 14.0)
+                                    .then_some(index)
+                            })
+                    });
                     self.extras.selected_waypoint = selected;
                     if selected.is_some() {
                         self.extras.map_drag = None;
@@ -358,7 +379,12 @@ impl Game<'_> {
         };
         // world_root distinguishes single-player saves and remote server save roots;
         // dimension is part of the identity so Nether/Overworld maps never mix.
-        let identity = format!("{}::{}::{:?}", self.world_root.display(), self.server_address().unwrap_or("singleplayer"), self.dim);
+        let identity = format!(
+            "{}::{}::{:?}",
+            self.world_root.display(),
+            self.server_address().unwrap_or("singleplayer"),
+            self.dim
+        );
         let cache_key = format!("{:x}", sha2::Sha256::digest(identity.as_bytes()));
         if self.extras.minimap_cache_key.as_deref() != Some(cache_key.as_str()) {
             self.save_minimap_cache();
@@ -368,9 +394,15 @@ impl Game<'_> {
             self.extras.minimap_last_saved = None;
             if let Some(path) = self.minimap_cache_path() {
                 match self.extras.minimap.load_from(&path) {
-                    Ok(true) => log::info!("Starling: restored {} explored map chunks", self.extras.minimap.tile_count()),
+                    Ok(true) => log::info!(
+                        "Starling: restored {} explored map chunks",
+                        self.extras.minimap.tile_count()
+                    ),
                     Ok(false) => {}
-                    Err(error) => log::warn!("Starling: could not load explored map cache {}: {error}", path.display()),
+                    Err(error) => log::warn!(
+                        "Starling: could not load explored map cache {}: {error}",
+                        path.display()
+                    ),
                 }
                 let waypoints_path = path.with_extension("waypoints.json");
                 self.extras.selected_waypoint = None;
@@ -414,7 +446,11 @@ impl Game<'_> {
         );
         // Persist at a low frequency while exploring; the title/disconnect path
         // above performs an immediate final flush.
-        if self.extras.minimap_last_saved.is_none_or(|last| last.elapsed() >= Duration::from_secs(3)) {
+        if self
+            .extras
+            .minimap_last_saved
+            .is_none_or(|last| last.elapsed() >= Duration::from_secs(3))
+        {
             self.save_minimap_cache();
         }
         if !self.extras.minimap.compose(view) {
@@ -500,7 +536,10 @@ impl Game<'_> {
                 player_offset,
             };
             if big {
-                let (px, pz) = self.player.as_ref().map_or((view.x, view.z), |p| (p.position.x, p.position.z));
+                let (px, pz) = self
+                    .player
+                    .as_ref()
+                    .map_or((view.x, view.z), |p| (p.position.x, p.position.z));
                 let coords = format!("X: {:.1}  Z: {:.1}", px, pz);
                 extras_hud::draw_big_map(
                     batch,
