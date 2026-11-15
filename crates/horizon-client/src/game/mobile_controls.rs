@@ -113,10 +113,7 @@ impl Game<'_> {
                 }
                 return true;
             }
-            if self.fullscreen_map_touch(t.id, t.phase, t.location.x as f32, t.location.y as f32) {
-            return;
-        }
-        if self.mobile.controls.editor.is_some() {
+            if self.mobile.controls.editor.is_some() {
                 self.mobile.controls.request_editor_back();
                 return true;
             }
@@ -330,7 +327,7 @@ impl Game<'_> {
     }
     pub(in crate::game) fn mobile_draw(&self, b: &mut HudBatch) {
         use horizon_client::android_control_ui as ui;
-        if self.extras.big_map {
+        if self.fullscreen_map_open() {
             return;
         }
         if !self.has_touch()
@@ -379,6 +376,9 @@ impl Game<'_> {
         id: WindowId,
     ) {
         self.mobile_init();
+        if self.fullscreen_map_touch(t.id, t.phase, t.location.x as f32, t.location.y as f32) {
+            return;
+        }
         let [w, h] = self.touch_size();
         let mut b = HudBatch::new([w, h]);
         let p = [t.location.x as f32 / b.scale, t.location.y as f32 / b.scale];
