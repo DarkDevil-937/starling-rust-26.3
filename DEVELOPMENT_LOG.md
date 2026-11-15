@@ -1,0 +1,40 @@
+# Starling development log
+
+This file is the chronological record for future AI assistants and contributors. Keep it updated whenever repository code, configuration, workflows, or project documentation is meaningfully changed.
+
+## 2026-11-15 — Explored map chunk retention
+
+- Repository: `DarkDevil-937/starling-rust-26.3`
+- Branch: `starling`
+- Code commit: `244385c335043745aa5efdc05d8662ca665e8226`
+- Commit message: `Keep explored map chunks after unload`
+- File: `crates/horizon-client-render/src/minimap.rs`
+- Change: removed the pruning that discarded cached map tiles when chunks unloaded or moved outside the current scan radius. Previously scanned tiles now remain in the in-memory map cache for the current map/dimension session.
+- Important limitation: this is RAM-only. It does not yet save explored terrain across app restarts. Cache reset behaviour when switching between different worlds/servers in the same dimension still needs review.
+- Build: ARM64-v8a-only workflow run #27, ID `43723719706`, URL https://github.com/DarkDevil-937/starling-rust-26.3/actions/runs/43723719706. Last checked on 2026-11-15: in progress; Android toolchain and Rust setup passed, build step had not started. Do not claim build success until rechecked.
+- Device test: not yet confirmed by user.
+
+## Next planned feature — Map image quality / resolution
+
+User reports that fullscreen map terrain looks very low quality / blurry. This is the next priority, ahead of adding more decorative features.
+
+Current implementation observations:
+- `crates/horizon-client-render/src/minimap.rs` has `SIZE = 512`.
+- Each chunk tile stores 16×16 sampled columns (256 cells).
+- `compose()` produces a 512×512 RGBA image from cached chunk tiles.
+- `crates/horizon-client/src/extras_hud.rs` draws the map image to the fullscreen HUD viewport.
+- A 512×512 composed image stretched over a large phone viewport may look soft; investigate the full texture upload/render path and sampler filtering before blindly increasing SIZE.
+- Next engineer/AI should inspect texture creation/upload and sampling (nearest vs linear), viewport scaling/cropping, map zoom-to-blocks-per-pixel, and whether the source image is actually being uploaded at full resolution.
+- Target: sharp readable terrain at multiple zoom levels, with smooth pan/zoom and no player movement from map gestures.
+- Device: POCO F7; build only `aarch64-linux-android` / ARM64-v8a. Watch memory and frame time; do not trade gameplay performance for a huge texture without measurement.
+- No code for this quality improvement has been committed yet.
+
+## Required validation checklist
+
+For every code change:
+1. Record date, branch, commit SHA/message, exact files changed, and what changed.
+2. Record any known limitations or risks; distinguish implemented from planned.
+3. Record the exact GitHub Actions run ID/URL and ABI; record status and conclusion only after checking.
+4. Record whether the user tested it on device and the actual result. Never imply device testing happened if it did not.
+5. Keep `PROJECT_HANDOFF.md` in sync with the latest state and point to this log.
+6. Preserve ARM64-v8a-only builds unless the user explicitly changes that requirement.
