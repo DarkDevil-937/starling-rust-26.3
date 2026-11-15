@@ -67,3 +67,27 @@ For every code change:
 4. Record whether the user tested it on device and the actual result. Never imply device testing happened if it did not.
 5. Keep `PROJECT_HANDOFF.md` in sync with the latest state and point to this log.
 6. Preserve ARM64-v8a-only builds unless the user explicitly changes that requirement.
+
+
+## 2026-11-15 — Persistent explored map, waypoint controls, and fullscreen remaster
+
+- Branch: `starling`.
+- Source commits:
+  - `47ada6624c4c133580462cd46c2e0725224ab170` — add serializable explored-tile cache load/save in `crates/horizon-client-render/src/minimap.rs`.
+  - `a0295c1e8eab1662b19d12895924509675556d56` — integrate cache load/save into `crates/horizon-client/src/game/extras.rs`.
+  - `96a34af0c6e126a53c92c0a1d0bbea8de1e93a2b` — add saved waypoint state and touch controls.
+  - `27cbb731cfb492cebf73ef0c835b9c5c74554e47` — redesign fullscreen map header/footer and render waypoint markers.
+  - `b8ce99588a61764830f2184e49696844f63dbd32` — raise map raster from 512 to 1024 texels.
+  - `b9e009d7cff91710661b0d97635269bb5e409875` — remove unused imports.
+  - `4a003bba5858e6f6ed0c51eb1a4c0c8bd87b983d` — include server identity in cache key and add remove-last-waypoint action.
+  - `224aa27e155106a65e69eb3607e39dc5185049a2` — add the matching delete waypoint control to the HUD.
+  - `ab69ee7552034fdaa8cde18ca281b1b5e588b9f9` — use 0.25 blocks per texel for the 1024px raster and allow finer zoom.
+  - `a6bb56350d318827959da70dd5f8f20fcd8dba4e` — update map raster documentation.
+- Explored-chunk persistence: tiles are serialized as versioned JSON under `HORIZON_PRIVATE/map-cache/`, with a key derived from the world root, connected server address (or singleplayer), and dimension. The cache is loaded on entering a world, saved periodically while exploring (3-second cadence when dirty), and flushed when leaving to the title/disconnect screen. Writes use a temporary file followed by rename so an interrupted write does not replace the last complete cache.
+- Waypoints: W button adds an automatically named waypoint at the player's current X/Z; D removes the most recently added waypoint. Waypoint coordinates/names are saved separately per world/dimension and are drawn on the fullscreen map at their world-relative positions.
+- Fullscreen UI: full-width title/coordinate header, compact bottom legend, waypoint markers, and close/zoom/add/remove controls. Map gestures remain captured while the map is open.
+- Quality: map image is now 1024×1024 (4× the previous pixel count), with default zoom 0.25 blocks per texel. This gives a denser fullscreen raster and a finer zoom range. The underlying terrain source is still one sampled map colour per world block; this is not sub-block geometry or a photorealistic terrain renderer.
+- Performance risk: composing a 1024×1024 image processes four times as many pixels as 512×512, and each upload carries a 4 MiB RGBA image. Validate frame pacing and memory on the POCO F7.
+- Build/CI: not yet verified for these commits. Do not install an earlier artifact as this update.
+- Device test: pending. Verify restart persistence, separation between singleplayer/server/dimensions, waypoint add/remove/persistence, map quality, pan/zoom, and gameplay input isolation.
+- Remaining waypoint limitation: current first pass auto-names markers and removes only the last marker; rename/select/delete-individual waypoint management is not implemented yet.
