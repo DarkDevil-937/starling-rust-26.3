@@ -34,7 +34,7 @@ pub(super) struct ExtrasState {
     /// Auto-reconnect's attempts at the current server.
     reconnect: Tracker,
     /// Starling: the fullscreen map (the M key) is open.
-    big_map: bool,
+    pub(super) big_map: bool,
     /// Fullscreen map zoom and pan.
     map_zoom: f32,
     map_pan: [f64; 2],

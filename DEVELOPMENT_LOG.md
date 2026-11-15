@@ -170,3 +170,11 @@ Actions #78 and #82 exposed stale workflow-presence tests after removing upstrea
 - Replaced that call with the existing state field `self.extras.big_map`, preserving the mobile HUD suppression while the fullscreen map is open.
 - Checks #87 also failed in `horizon-client-render/src/audio.rs`: the host checks build disables the `audio` feature, so `Stream = Infallible` and matching `Ok(v)` is unreachable. Scoped stream opening/matching to `#[cfg(feature = "audio")]` and use `(None, false)` for no-audio builds. Audio-enabled Android builds retain the existing open/fallback behaviour.
 - Updated source only; this commit is **not yet CI-verified** and no APK is ready until Checks and ARM64-v8a Android build both pass.
+
+
+## CI repair — 2026-11-15 (runs #92 and #88)
+
+- Inspected failed Android run #92 (job 132896721038) and Checks run #88 (job 132896720784) for commit `fa6c258d70213409a25b81d141334d3b81b1ce87`.
+- Android's exact compiler error was E0616: `mobile_controls.rs` reads `ExtrasState.big_map`, but the field was private to the sibling `extras` module. Narrowly changed the field to `pub(super)`, exposing it within the parent `game` module only.
+- Checks' exact error was `dead_code` on the no-audio `Audio::open_named` stub. That stub has no callers because `set_device` is separately compiled for no-audio builds. Removed the unused stub; the real `open_named` remains compiled only with `feature = "audio"`.
+- These are source-level corrections to the two actual errors; fresh checks and the ARM64-v8a Android build are required before considering the repair validated. No APK from #92 was produced.
