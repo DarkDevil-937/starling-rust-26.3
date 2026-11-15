@@ -62,14 +62,34 @@ pub fn draw_minimap(
     corners: &mut Corners,
     look: &MinimapLook,
 ) {
+    let (x, y) = corners.place(look.corner, look.size, look.size);
+    draw_map_at(batch, atlas, look, (x, y), 4.0);
+}
+
+/// Starling: the fullscreen map (the M key), centred over a dimmed screen.
+pub fn draw_big_map(batch: &mut HudBatch, atlas: &HudAtlas, look: &MinimapLook) {
+    batch.fill(atlas, 0.0, 0.0, batch.width, batch.height, BACKGROUND);
+    let x = (batch.width - look.size) / 2.0;
+    let y = (batch.height - look.size) / 2.0;
+    draw_map_at(batch, atlas, look, (x, y), 8.0);
+}
+
+/// The map image at `(x, y)` with the player arrow (`h` GUI pixels from its
+/// centre to its edge) and, when the map turns, the rim's N.
+fn draw_map_at(
+    batch: &mut HudBatch,
+    atlas: &HudAtlas,
+    look: &MinimapLook,
+    (x, y): (f32, f32),
+    h: f32,
+) {
     let MinimapLook {
-        corner,
         size,
         image,
         arrow,
         north,
+        ..
     } = *look;
-    let (x, y) = corners.place(corner, size, size);
     batch.rect_uv(x, y, size, size, image, u32::MAX);
     let (cx, cy) = (x + size / 2.0, y + size / 2.0);
     if let Some(r) = atlas.sprites.get("map/decorations/player").copied() {
@@ -77,7 +97,6 @@ pub fn draw_minimap(
         // points down the texture, so up on screen is half a turn.
         let (s, c) = (arrow + 180.0).to_radians().sin_cos();
         let p = |dx: f32, dy: f32| [cx + dx * c - dy * s, cy + dx * s + dy * c];
-        let h = 4.0;
         batch.quad(
             [p(-h, h), p(h, h), p(h, -h), p(-h, -h)],
             [[r.u0, r.v0], [r.u1, r.v0], [r.u1, r.v1], [r.u0, r.v1]],

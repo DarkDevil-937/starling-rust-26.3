@@ -13,7 +13,7 @@ use horizon_client::{
     title::Mode,
 };
 use std::time::Duration;
-use winit::event::MouseButton;
+use winit::{event::MouseButton, keyboard::KeyCode};
 
 #[derive(Default)]
 pub(super) struct ExtrasState {
@@ -26,6 +26,8 @@ pub(super) struct ExtrasState {
     minimap_dim: Option<Dim>,
     /// Auto-reconnect's attempts at the current server.
     reconnect: Tracker,
+    /// Starling: the fullscreen map (the M key) is open.
+    big_map: bool,
 }
 /// CPU time the minimap's tiles may take per frame.
 const MINIMAP_BUDGET: Duration = Duration::from_micros(300);
@@ -156,13 +158,42 @@ impl Game<'_> {
     fn minimap_wanted(&self) -> Option<NativeMinimap> {
         // Starling: a mod's minimap wins; with none installed, show a built-in
         // default so no native-mod compile is needed.
-        self.native_minimap_now().or(Some(NativeMinimap {
+        let map = self.native_minimap_now().unwrap_or(NativeMinimap {
             corner: Corner::TopRight,
             size: 72.0,
             blocks_per_pixel: 1.0,
             rotate: false,
             round: false,
-        }))
+        });
+        // The fullscreen map (M) shows a wider area, north up.
+        Some(if self.extras.big_map {
+            NativeMinimap {
+                blocks_per_pixel: 2.0,
+                rotate: false,
+                round: false,
+                ..map
+            }
+        } else {
+            map
+        })
+    }
+    /// Starling: M opens and closes the fullscreen map, and Escape closes it
+    /// before it can open the pause menu. True when the key was used.
+    pub(super) fn map_key_press(&mut self, key: KeyCode) -> bool {
+        if self.screen != Screen::Playing || self.title.is_some() {
+            return false;
+        }
+        match key {
+            KeyCode::KeyM => {
+                self.extras.big_map = !self.extras.big_map;
+                true
+            }
+            KeyCode::Escape if self.extras.big_map => {
+                self.extras.big_map = false;
+                true
+            }
+            _ => false,
+        }
     }
     /// Refresh the minimap's tiles within the frame budget, recompose its
     /// image when the view or a tile changed, and queue the upload.
@@ -245,7 +276,8 @@ impl Game<'_> {
     /// by the caller). The top left corner gives way to the debug screen.
     pub(super) fn draw_extras(&mut self, batch: &mut HudBatch) {
         let map = self.minimap_shown();
-        let visible = |corner| !(self.debug && corner == Corner::TopLeft);
+        let big = self.extras.big_map;
+        let visible = |corner| big || !(self.debug && corner == Corner::TopLeft);
         let mut corners = Corners::new(batch.width, batch.height, self.effect_rows_height());
         let atlas = &self.gui.atlas;
         if let Some((map_corner, map_size, view)) = map
@@ -260,12 +292,20 @@ impl Game<'_> {
             };
             let look = extras_hud::MinimapLook {
                 corner: map_corner,
-                size: map_size,
+                size: if big {
+                    (batch.height - 8.0).min(batch.width - 8.0)
+                } else {
+                    map_size
+                },
                 image,
                 arrow,
                 north,
             };
-            extras_hud::draw_minimap(batch, atlas, &mut corners, &look);
+            if big {
+                extras_hud::draw_big_map(batch, atlas, &look);
+            } else {
+                extras_hud::draw_minimap(batch, atlas, &mut corners, &look);
+            }
         }
         self.native_hud(batch, &mut corners);
     }
