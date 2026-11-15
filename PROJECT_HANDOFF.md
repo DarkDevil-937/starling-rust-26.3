@@ -192,3 +192,13 @@ User reports explored chunks persist after restarting and map quality is now acc
 - Latest checks run #83 failed at `cargo +stable fmt --all -- --check`; the log identified formatting-only differences in `extras_hud.rs` and `game/extras.rs`. Rust clippy and tests were not reached in that run.
 - Applied formatting corrections matching the CI diff. Android run #87 was building ARM64-v8a for the same source code at the time of inspection; no success claim until its artifact and final checks are confirmed.
 - Always inspect workflow job logs after failures, fix the specific root cause, and rebuild before asking the user to install. User needs the ARM64-v8a APK artifact from the final successful run, not an arbitrary source commit.
+
+
+## Current authoritative status — 2026-11-15 (after run #88)
+
+- Latest source commit at inspection: `8bbd72d00879caedbe98aadefa1b79c1382feccb`.
+- Android run #88, ID `43738219528`, succeeded for **ARM64-v8a only**. APK artifact `starling-apk-arm64-v8a`, ID `14171324177`; symbols artifact ID `14171319351`. Run URL: https://github.com/DarkDevil-937/starling-rust-26.3/actions/runs/43738219528
+- Checks run #84, ID `43738219505`, failed at rustfmt due to one remaining line-wrap in `crates/horizon-client/src/game/extras.rs`; Clippy and Rust tests were skipped. Exact rustfmt correction has now been applied; wait for a new checks run before calling full validation complete.
+- Do not ask the user to install yet. Prefer the APK from the next successful Android run on the post-format-fix commit after checks also pass.
+- User has not device-tested the virtual cursor/waypoint build. After a verified build, test tap-to-position, add waypoint away from player, arrow-key cursor navigation, Enter activation, map controls without moving player, and cache persistence.
+- Historical Actions run deletion is not supported by the currently connected GitHub actions; no run history was deleted.

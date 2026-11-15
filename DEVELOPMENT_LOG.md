@@ -140,3 +140,10 @@ Actions #78 and #82 exposed stale workflow-presence tests after removing upstrea
 - Inspected checks run #83 on branch `starling` (commit `8b5246749165bb4ab920a8b65070ceb590fcf01c`). The failure was specifically `cargo +stable fmt --all -- --check`, with formatting diffs only in `extras_hud.rs` and `game/extras.rs`; clippy had not run yet.
 - Applied the exact rustfmt layout shown in the CI log to those two files. Android run #87 on the same source tree was still building ARM64-v8a at inspection time; its result is not yet treated as validation.
 - Process improvement: inspect failed job logs and repair the reported cause before asking the user to rerun anything. Only recommend downloading the APK artifact from the final successful ARM64 Android run whose commit contains the cursor/waypoint changes.
+
+
+## 2026-11-15 — Second CI formatting correction and build result
+
+- Checks run #84 (ID 43738219505) on commit `8bbd72d00879caedbe98aadefa1b79c1382feccb` failed at `cargo +stable fmt --all -- --check` due to one remaining line-wrap difference in `crates/horizon-client/src/game/extras.rs`. Clippy and Rust tests were not reached.
+- Android run #88 (ID 43738219528) for the same commit succeeded. It produced `starling-apk-arm64-v8a` (artifact ID 14171324177) and `starling-symbols-arm64-v8a` (artifact ID 14171319351). The APK is built, but full CI validation remains incomplete until checks pass.
+- Applied the exact remaining rustfmt line wrapping to `game/extras.rs`. A new push should trigger fresh checks and ARM64 build; prefer the artifact from that final commit once both workflows pass.

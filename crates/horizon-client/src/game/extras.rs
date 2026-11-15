@@ -375,7 +375,9 @@ impl Game<'_> {
                                 / extent;
                         let world_z = center_z
                             + f64::from(cursor[1] - h as f32 / scale * 0.5)
-                                * f64::from(zoom) * minimap::SIZE as f64 / extent;
+                                * f64::from(zoom)
+                                * minimap::SIZE as f64
+                                / extent;
                         let number = self.extras.map_waypoints.len() + 1;
                         self.extras.map_waypoints.push(extras_hud::MapWaypoint {
                             name: format!("Waypoint {number}"),
