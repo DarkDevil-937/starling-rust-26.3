@@ -106,3 +106,44 @@ In `crates/horizon-client-render/src/minimap.rs`, `Minimap::update()` previously
 - Never say “fixed” before build success and user device test.
 - Clearly distinguish committed code, CI success, APK availability, and device-tested behaviour.
 - User prefers action and concrete repo changes over generic instructions.
+
+
+## Latest map remaster — 2026-11-15
+
+The newest source commits on `starling` add disk persistence, waypoint controls, a denser raster, and a new fullscreen HUD. The chronological record is in `DEVELOPMENT_LOG.md`.
+
+### Implemented in source (CI/device validation pending)
+- Explored chunk tiles save to `HORIZON_PRIVATE/map-cache/<world-server-dimension-key>.json`.
+- Cache identity includes `world_root`, the connected server address (or `singleplayer`), and dimension. This prevents ordinary world/server/dimension collisions.
+- Tiles load when entering a world, save every three seconds when dirty, and flush when leaving the world.
+- W adds a waypoint at the player's current X/Z. D removes the most recently added waypoint. Waypoints persist in a sibling JSON file and render as labelled map markers.
+- Fullscreen map HUD now has a full-width header, coordinates, bottom usage legend, and close/zoom/waypoint controls.
+- Raster is 1024×1024 instead of 512×512; default blocks-per-texel is 0.25. This improves displayed raster density but still uses vanilla block map-colour samples, not sub-block terrain geometry.
+- Map touch handling continues to capture gestures while fullscreen map is open.
+
+### Source commit list
+- `47ada6624c4c133580462cd46c2e0725224ab170`
+- `a0295c1e8eab1662b19d12895924509675556d56`
+- `96a34af0c6e126a53c92c0a1d0bbea8de1e93a2b`
+- `27cbb731cfb492cebf73ef0c835b9c5c74554e47`
+- `b8ce99588a61764830f2184e49696844f63dbd32`
+- `b9e009d7cff91710661b0d97635269bb5e409875`
+- `4a003bba5858e6f6ed0c51eb1a4c0c8bd87b983d`
+- `224aa27e155106a65e69eb3607e39dc5185049a2`
+- `ab69ee7552034fdaa8cde18ca281b1b5e588b9f9`
+- `a6bb56350d318827959da70dd5f8f20fcd8dba4e`
+
+### Known risks / remaining work
+- **Not build-verified yet.** Confirm ARM64-v8a CI for the latest source before offering an APK.
+- 1024×1024 composition/upload is 4× the previous pixel workload; measure frame pacing and memory on POCO F7.
+- Waypoints currently auto-name, add at current player location, and remove only the last one. Renaming and selecting/deleting arbitrary markers remain future work.
+- Map raster samples block map colours; no sub-block geometry or high-detail terrain shading yet.
+- Verify the world-root/server-address identity against both singleplayer saves and remote servers in device testing.
+- Do not call this fixed until CI passes and the user confirms on device.
+
+### Immediate next actions
+1. Check latest branch head and GitHub Actions runs after these commits. Diagnose/fix compile and formatting failures.
+2. Keep build target ARM64-v8a only.
+3. Once CI succeeds, provide the exact new APK artifact.
+4. Ask the user to test: explore chunks, leave and force-close/reopen Starling, rejoin; verify terrain returns; add/remove waypoints; switch worlds/servers/dimensions; test drag/zoom and confirm player movement is unaffected.
+5. Update this handoff and `DEVELOPMENT_LOG.md` with exact CI run and test outcomes.
