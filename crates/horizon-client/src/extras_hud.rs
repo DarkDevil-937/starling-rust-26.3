@@ -68,8 +68,23 @@ pub fn draw_big_map(
     coords: &str,
 ) -> [[f32; 4]; 3] {
     batch.fill(atlas, 0.0, 0.0, batch.width, batch.height, BACKGROUND);
-    // Full viewport map, rather than the old centered square.
-    batch.rect_uv(0.0, 0.0, batch.width, batch.height, look.image, u32::MAX);
+    // Fill the landscape viewport without distorting the square terrain
+    // texture: crop the vertical edges (or horizontal edges on portrait).
+    let mut image = look.image;
+    if batch.width > batch.height {
+        let visible = batch.height / batch.width;
+        let crop = (1.0 - visible) * 0.5;
+        let span = image.v1 - image.v0;
+        image.v0 += span * crop;
+        image.v1 -= span * crop;
+    } else if batch.height > batch.width {
+        let visible = batch.width / batch.height;
+        let crop = (1.0 - visible) * 0.5;
+        let span = image.u1 - image.u0;
+        image.u0 += span * crop;
+        image.u1 -= span * crop;
+    }
+    batch.rect_uv(0.0, 0.0, batch.width, batch.height, image, u32::MAX);
     let (cx, cy) = (batch.width / 2.0, batch.height / 2.0);
     if let Some(r) = atlas.sprites.get("map/decorations/player").copied() {
         let (s, c) = (look.arrow + 180.0).to_radians().sin_cos();
@@ -100,8 +115,12 @@ pub fn draw_big_map(
 
 fn draw_map_button(batch: &mut HudBatch, atlas: &HudAtlas, r: [f32; 4], label: &str) {
     let [x, y, w, h] = r;
-    batch.fill(atlas, x, y, w, h, 0xCC_1A1A1A);
-    batch.fill(atlas, x + 1.0, y + 1.0, w - 2.0, h - 2.0, 0xCC_3A3A3A);
+    // Raised pixel-style control: dark outline, light top edge and inset face.
+    batch.fill(atlas, x, y, w, h, 0xFF_101010);
+    batch.fill(atlas, x + 1.0, y + 1.0, w - 2.0, h - 2.0, 0xFF_B8B8B8);
+    batch.fill(atlas, x + 3.0, y + 3.0, w - 6.0, h - 6.0, 0xFF_454545);
+    batch.fill(atlas, x + 3.0, y + 3.0, w - 6.0, 2.0, 0xFF_777777);
+    batch.fill(atlas, x + 3.0, y + h - 5.0, w - 6.0, 2.0, 0xFF_252525);
     let tw = HudBatch::text_width(atlas, label);
     let tx = x + (w - tw) / 2.0;
     let ty = y + (h - 8.0) / 2.0 - 1.0;
