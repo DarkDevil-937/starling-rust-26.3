@@ -98,7 +98,9 @@ struct Tile {
     scanned: Instant,
 }
 
-fn instant_now() -> Instant { Instant::now() }
+fn instant_now() -> Instant {
+    Instant::now()
+}
 /// `MapItem.update` for one column: the first block with a map colour
 /// going down, the fluid's colour over a fluid unless the block is sturdy on
 /// top (`getCorrectStateForFluidBlock`), and the fluid's depth.
