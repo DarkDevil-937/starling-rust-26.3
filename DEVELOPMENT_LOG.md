@@ -46,6 +46,18 @@ Current implementation observations:
 - This does not increase texture size or GPU memory. It shows a closer, more detailed area by default; the existing zoom buttons and pan calculations use the same active zoom value.
 - CI: a new ARM64-v8a workflow is expected from the latest push; record its exact run ID/status after checking. No build success claimed yet.
 - Device test: pending. User must compare map detail and verify zoom/pan do not move the player.
+## 2026-11-15 — Fullscreen map pan marker, session cache, and HUD redesign
+
+- Source commits:
+  - `7d9d8fbf4998815ac59b7e3f90c07ab03e5a8475` — `Keep explored map cache and track player while panning` (`crates/horizon-client/src/game/extras.rs`).
+  - `9a2e6e31472af3bcab319ead9c65433dc67d8a9e` — `Redesign fullscreen map HUD and move player marker` (`crates/horizon-client/src/extras_hud.rs`).
+  - `cedc058e5a97c584b41f89de9fc651c2e4d84347` — `Set sharper closer fullscreen map starting zoom` (`crates/horizon-client/src/game/extras.rs`).
+- Cache lifecycle: stopped clearing the explored tile cache merely because `player` becomes `None` on the title/disconnect screen. The in-memory explored tiles can now survive leaving a world/server and returning while the app process remains alive. Cache still clears on dimension changes and when the map is explicitly disabled. This is not disk persistence; force-stopping/restarting Starling loses this cache. A world/server identity key is still needed to prevent old cached terrain mixing with a different world in the same dimension.
+- Player marker: fullscreen map now computes a screen-space offset from `map_pan` and zoom, so the marker represents the player's actual position relative to the panned terrain instead of staying pinned at map centre. It is hidden when the player is outside the visible map.
+- Fullscreen HUD: replaced the raised pixel/bevel buttons with restrained flat translucent controls and a compact WORLD MAP / coordinate strip. Existing button positions and touch hitboxes are unchanged.
+- Starting zoom: set `DEFAULT_FULLSCREEN_MAP_ZOOM` to `0.5` blocks per pixel so terrain appears closer/larger on screen. This does not create sub-block data; it trades visible world area for a larger presentation of the same block-level map pixels. User can zoom out with the existing control.
+- Build: ARM64-v8a-only workflow triggered by latest pushes; record run ID, status and artifacts after checking. No build success claimed yet.
+- Device validation: pending. Specifically test (1) drag map and confirm player marker moves relative to terrain, (2) leave/rejoin same world/server and confirm explored map remains, (3) open fullscreen map and judge visual layout and detail, (4) switch to a different world/dimension and report any stale terrain.
 ## Required validation checklist
 
 For every code change:
