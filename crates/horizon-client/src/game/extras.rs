@@ -285,6 +285,9 @@ impl Game<'_> {
                         });
                         self.save_map_waypoints();
                     }
+                } else if hit(by + 4.0 * (side + 6.0)) {
+                    self.extras.map_waypoints.pop();
+                    self.save_map_waypoints();
                 } else {
                     self.extras.map_drag = Some((id, x, y));
                 }
@@ -329,7 +332,7 @@ impl Game<'_> {
         };
         // world_root distinguishes single-player saves and remote server save roots;
         // dimension is part of the identity so Nether/Overworld maps never mix.
-        let identity = format!("{}::{:?}", self.world_root.display(), self.dim);
+        let identity = format!("{}::{}::{:?}", self.world_root.display(), self.server_address().unwrap_or("singleplayer"), self.dim);
         let cache_key = format!("{:x}", sha2::Sha256::digest(identity.as_bytes()));
         if self.extras.minimap_cache_key.as_deref() != Some(&cache_key) {
             self.save_minimap_cache();
