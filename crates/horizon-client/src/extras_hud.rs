@@ -141,7 +141,10 @@ pub fn draw_big_map(
     batch.fill(atlas, 0.0, footer_y, batch.width, 30.0, 0xD9161B22);
     batch.text(
         atlas,
-        &format!("{} WAYPOINTS  •  DRAG TO PAN  •  W ADD  •  TAP MARKER TO SELECT  •  D DELETE", waypoints.len()),
+        &format!(
+            "{} WAYPOINTS  •  DRAG TO PAN  •  W ADD  •  TAP MARKER TO SELECT  •  D DELETE",
+            waypoints.len()
+        ),
         14.0,
         footer_y + 10.0,
         rgba(220, 230, 240, 255),
