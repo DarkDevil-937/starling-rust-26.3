@@ -444,7 +444,8 @@ impl Game<'_> {
     /// The sort key: sorts the part under the cursor (the container when
     /// the cursor is over no slot).
     pub(super) fn sort_key_press(&mut self, key: KeyCode) -> bool {
-        keybinds::key_name(key).is_some_and(|name| self.sort_input(name))
+        // Starling: the fullscreen map's keys (M, Escape) come first.
+        self.map_key_press(key) || keybinds::key_name(key).is_some_and(|name| self.sort_input(name))
     }
     pub(super) fn sort_mouse_press(&mut self, button: MouseButton) -> bool {
         self.sort_input(&keybinds::mouse_name(button))
