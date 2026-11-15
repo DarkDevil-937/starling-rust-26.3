@@ -37,10 +37,10 @@ User says fullscreen map quality/resolution is very low. This is the next priori
 - Do not blindly increase texture size. First trace texture allocation/upload, GPU sampler filtering (nearest/linear), viewport scaling/cropping, and zoom-to-blocks-per-pixel. Determine whether blur comes from source resolution, filtering, or stretching.
 - Target: crisp readable terrain at multiple zoom levels, smooth pan/zoom, and map gestures must not move the player.
 - Balance sharpness against RAM/GPU memory and frame time on POCO F7.
-- No map-quality code change has been committed yet.
+- No map-quality code change has been committed yet. Investigation confirms the 512×512 image is copied at full declared size into the `horizon/minimap` atlas slot, and `horizon/` sprites are excluded from atlas shrinking. Inspect the standard sampler's default filtering and fullscreen zoom/blocks-per-pixel before editing. Since the map stores one colour per world block, increasing SIZE alone may just display more world rather than improve detail.
 
 ## Current source state
-- Latest known branch HEAD after documentation update: check GitHub branch `starling` before editing. Latest source-code commit remains `244385c335043745aa5efdc05d8662ca665e8226`; subsequent commits only add/update documentation.
+- Latest known branch HEAD: check GitHub branch `starling` before editing; the latest documentation commit records successful run #27 and the map-quality investigation. Latest source-code commit remains `244385c335043745aa5efdc05d8662ca665e8226`; subsequent commits only add/update documentation.
 - Latest source-code commit message: `Keep explored map chunks after unload`
 - Latest changed source file: `crates/horizon-client-render/src/minimap.rs`
 - Previous map work is already on branch `starling`, including:
@@ -64,7 +64,7 @@ In `crates/horizon-client-render/src/minimap.rs`, `Minimap::update()` previously
 - ARM64-only workflow run for explored-chunk source commit:
   - Run #27, ID `43723719706`
   - URL: https://github.com/DarkDevil-937/starling-rust-26.3/actions/runs/43723719706
-  - Last checked: in progress. Android toolchain and Rust setup passed; build had not started yet.
+  - Final result checked on 2026-11-15: **success**. ARM64-v8a APK artifact `starling-apk-arm64-v8a`, artifact ID `14165247537`; symbols artifact ID `14166051091`.
 - Documentation commits also trigger workflow runs because the workflow listens to branch pushes. Do not confuse a documentation-only run with a new source-code build.
 - Previous verified run for commit `8d1f790b...`:
   - Run ID `43722047939`
@@ -80,6 +80,10 @@ In `crates/horizon-client-render/src/minimap.rs`, `Minimap::update()` previously
 - The world/dimension identity is represented by `minimap_dim`; dimension change clears current cache. Check world/server switching behaviour to ensure the cache is also cleared when a different world is joined in the same dimension.
 - Texture size 512 is a sampled view of known cached chunk tiles, not a full world reveal.
 - Do not revert earlier map UI/touch changes while working on map quality or tile persistence.
+
+## 2026-11-15 quality investigation
+- No source change yet. See `DEVELOPMENT_LOG.md` for details: atlas slot is not intentionally downscaled; map is a per-block colour raster; inspect default sampler and fullscreen zoom/blocks-per-pixel before deciding whether to increase resolution.
+- User has not yet tested a map-quality build.
 
 ## Required next actions
 1. Recheck branch `starling`, workflow run #27, and any newer runs. Confirm which run actually builds source commit `244385c...`; ignore documentation-only runs for source verification.
