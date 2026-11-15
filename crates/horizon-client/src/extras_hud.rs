@@ -68,9 +68,30 @@ pub fn draw_minimap(
 ) {
     let (x, y) = corners.place(look.corner, look.size, look.size);
     // Framed, pixel-style minimap panel inspired by classic Minecraft map mods.
-    batch.fill(atlas, x - 3.0, y - 3.0, look.size + 6.0, look.size + 6.0, 0xFF_101010);
-    batch.fill(atlas, x - 2.0, y - 2.0, look.size + 4.0, look.size + 4.0, 0xFF_C8C8C8);
-    batch.fill(atlas, x - 1.0, y - 1.0, look.size + 2.0, look.size + 2.0, 0xFF_303030);
+    batch.fill(
+        atlas,
+        x - 3.0,
+        y - 3.0,
+        look.size + 6.0,
+        look.size + 6.0,
+        0xFF_101010,
+    );
+    batch.fill(
+        atlas,
+        x - 2.0,
+        y - 2.0,
+        look.size + 4.0,
+        look.size + 4.0,
+        0xFF_C8C8C8,
+    );
+    batch.fill(
+        atlas,
+        x - 1.0,
+        y - 1.0,
+        look.size + 2.0,
+        look.size + 2.0,
+        0xFF_303030,
+    );
     draw_map_at(batch, atlas, look, (x, y), 4.0);
     if look.north.is_none() {
         let (cx, cy) = (x + look.size / 2.0, y + look.size / 2.0);
@@ -120,14 +141,22 @@ pub fn draw_big_map(
     );
     // Keep the player marker tied to the real player position while the map
     // is dragged underneath it. Hide it when the player is outside the view.
-    if cx >= 12.0 && cy >= 12.0 && cx <= batch.width - 12.0 && cy <= batch.height - 12.0
+    if cx >= 12.0
+        && cy >= 12.0
+        && cx <= batch.width - 12.0
+        && cy <= batch.height - 12.0
         && let Some(r) = atlas.sprites.get("map/decorations/player").copied()
     {
         let (s, c) = (look.arrow + 180.0).to_radians().sin_cos();
         let half = 9.0;
         let p = |dx: f32, dy: f32| [cx + dx * c - dy * s, cy + dx * s + dy * c];
         batch.quad(
-            [p(-half, half), p(half, half), p(half, -half), p(-half, -half)],
+            [
+                p(-half, half),
+                p(half, half),
+                p(half, -half),
+                p(-half, -half),
+            ],
             [[r.u0, r.v0], [r.u1, r.v0], [r.u1, r.v1], [r.u0, r.v1]],
             u32::MAX,
         );
@@ -135,7 +164,14 @@ pub fn draw_big_map(
     // Polished full-width header and compact footer keep the terrain dominant.
     batch.fill(atlas, 0.0, 0.0, batch.width, 54.0, 0xD9161B22);
     batch.fill(atlas, 0.0, 52.0, batch.width, 2.0, 0xFF_65B8E8);
-    batch.text(atlas, "WORLD MAP", 16.0, 10.0, rgba(130, 205, 255, 255), true);
+    batch.text(
+        atlas,
+        "WORLD MAP",
+        16.0,
+        10.0,
+        rgba(130, 205, 255, 255),
+        true,
+    );
     batch.text(atlas, coords, 16.0, 27.0, rgba(245, 248, 252, 255), true);
     let footer_y = batch.height - 30.0;
     batch.fill(atlas, 0.0, footer_y, batch.width, 30.0, 0xD9161B22);
@@ -168,7 +204,14 @@ pub fn draw_big_map(
             };
             batch.fill(atlas, x - 5.0, y - 5.0, 10.0, 10.0, marker);
             batch.fill(atlas, x - 1.0, y - 1.0, 2.0, 2.0, 0xFF202020);
-            batch.text(atlas, &waypoint.name, x + 8.0, y - 4.0, rgba(255, 230, 160, 255), true);
+            batch.text(
+                atlas,
+                &waypoint.name,
+                x + 8.0,
+                y - 4.0,
+                rgba(255, 230, 160, 255),
+                true,
+            );
         }
     }
 
@@ -200,7 +243,14 @@ fn draw_map_button(batch: &mut HudBatch, atlas: &HudAtlas, r: [f32; 4], label: &
     let tw = HudBatch::text_width(atlas, label);
     let tx = x + (w - tw) / 2.0;
     let ty = y + (h - 8.0) / 2.0 - 1.0;
-    batch.text(atlas, label, tx.round(), ty.round(), rgba(245, 248, 252, 255), true);
+    batch.text(
+        atlas,
+        label,
+        tx.round(),
+        ty.round(),
+        rgba(245, 248, 252, 255),
+        true,
+    );
 }
 
 fn draw_map_at(
