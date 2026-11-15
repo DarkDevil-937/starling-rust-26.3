@@ -10,6 +10,15 @@ Last updated: 2026-11-15
 - Required build ABI: **ARM64-v8a only** (`aarch64-linux-android`). Do not add x86, x86_64, or armeabi-v7a builds.
 - User works from Android; assume no desktop/PC.
 
+## Documentation / continuity requirement
+The user explicitly requires every meaningful repository edit to be documented so another AI can continue without losing context.
+- Read `DEVELOPMENT_LOG.md` first for the chronological history, implementation notes, CI results, device-test status, and next planned work.
+- Update `DEVELOPMENT_LOG.md` after every meaningful code/config/workflow change and build or device-test result.
+- Keep this `PROJECT_HANDOFF.md` updated with the current state, latest commit, current priority, build status, limitations, and next steps.
+- Record exact commit SHAs, file paths, workflow run IDs/URLs, and whether the change is merely committed, CI-verified, or actually tested by the user.
+- Do not claim a feature is fixed just because code was committed or CI passed.
+- If a change is made, do not leave the next AI to infer what happened from Git history alone.
+
 ## User's current priority
 Build a genuinely useful fullscreen Minecraft world map and minimap. The critical requirement now is an explored-world map:
 - When a chunk has been explored/scanned, its terrain must remain visible when the player moves away, the game unloads that chunk, or the user pans the map away from the player.
@@ -19,16 +28,27 @@ Build a genuinely useful fullscreen Minecraft world map and minimap. The critica
 - The user wants a polished fullscreen map, not a centered square with poor controls; zoom and pan must work without moving the player.
 - Persistent cache across app restarts is a later enhancement unless user explicitly prioritizes it; the current change only retains tiles in memory during the running session.
 
+## Next feature priority: improve map image quality
+User says fullscreen map quality/resolution is very low. This is the next priority, before more decorative map features.
+- Current renderer in `crates/horizon-client-render/src/minimap.rs` uses `SIZE = 512`.
+- Each chunk tile contains 16×16 sampled columns.
+- `compose()` generates a 512×512 RGBA image.
+- `crates/horizon-client/src/extras_hud.rs` draws the map image across the fullscreen HUD viewport.
+- Do not blindly increase texture size. First trace texture allocation/upload, GPU sampler filtering (nearest/linear), viewport scaling/cropping, and zoom-to-blocks-per-pixel. Determine whether blur comes from source resolution, filtering, or stretching.
+- Target: crisp readable terrain at multiple zoom levels, smooth pan/zoom, and map gestures must not move the player.
+- Balance sharpness against RAM/GPU memory and frame time on POCO F7.
+- No map-quality code change has been committed yet.
+
 ## Current source state
-- Latest known branch HEAD: `244385c335043745aa5efdc05d8662ca665e8226`
-- Latest commit message: `Keep explored map chunks after unload`
-- Latest changed file: `crates/horizon-client-render/src/minimap.rs`
+- Latest known branch HEAD after documentation update: check GitHub branch `starling` before editing. Latest source-code commit remains `244385c335043745aa5efdc05d8662ca665e8226`; subsequent commits only add/update documentation.
+- Latest source-code commit message: `Keep explored map chunks after unload`
+- Latest changed source file: `crates/horizon-client-render/src/minimap.rs`
 - Previous map work is already on branch `starling`, including:
   - `crates/horizon-client-render/src/minimap.rs`: map texture size increased from 128 to 512.
   - `crates/horizon-client/src/extras_hud.rs`: fullscreen map cover-crop to viewport, pixel-style map buttons, framed minimap and compass labels.
   - `crates/horizon-client/src/game/extras.rs`: fullscreen map touch handling, zoom/pan state, pan scale adjustment.
   - `crates/horizon-client/src/game/mobile_controls.rs`: earlier touch overlay suppression while fullscreen map is open.
-- Prior known commit before explored-tile fix: `8d1f790b70a6e47aeb9fd3a686231b25b3680e18`.
+- Prior known map UI commit: `8d1f790b70a6e47aeb9fd3a686231b25b3680e18`.
 
 ## Explored-chunk fix just committed
 In `crates/horizon-client-render/src/minimap.rs`, `Minimap::update()` previously ran `self.tiles.retain(...)` and removed any tile if its chunk was unloaded, or outside the current radius. This directly caused explored terrain to disappear when panning or moving away.
@@ -37,40 +57,42 @@ In `crates/horizon-client-render/src/minimap.rs`, `Minimap::update()` previously
 - The update loop still scans currently loaded chunks near the current map view. `compose()` can render from retained tiles after chunks unload.
 - `clear()` still resets the cache on dimension change / map reset.
 - This change is committed but **not yet build-verified or device-tested**.
+- RAM grows as more chunks are explored; cache persistence and world/server identity need future review.
 
 ## Build history / current CI
 - Android workflow: `.github/workflows/android.yml`
-- Latest build triggered by explored-chunk commit:
-  - Run ID: `43723719706`
+- ARM64-only workflow run for explored-chunk source commit:
+  - Run #27, ID `43723719706`
   - URL: https://github.com/DarkDevil-937/starling-rust-26.3/actions/runs/43723719706
-  - At handoff update time it was queued; check current status before asking user to install.
+  - Last checked: in progress. Android toolchain and Rust setup passed; build had not started yet.
+- Documentation commits also trigger workflow runs because the workflow listens to branch pushes. Do not confuse a documentation-only run with a new source-code build.
 - Previous verified run for commit `8d1f790b...`:
-  - Run ID: `43722047939`
+  - Run ID `43722047939`
   - Conclusion: success.
   - This is an older build and does not include the explored-chunk cache fix.
-- Do not claim the latest code builds or works until run `43723719706` (or a newer run for current HEAD) succeeds and the user tests it.
+- Do not claim latest code builds or works until the correct source-code commit is covered by a successful ARM64 build and the user tests it.
 
 ## Known implementation details / risks
-- `Minimap` owns `tiles: FxHashMap<(i32, i32), Tile>`; each tile stores 16x16 map colours, height and water depth for a chunk.
+- `Minimap` owns `tiles: FxHashMap<(i32, i32), Tile>`; each tile stores 16×16 map colours, height and water depth for a chunk.
 - `compose()` samples the cached tile map using world block coordinates.
 - `update_minimap()` in `crates/horizon-client/src/game/extras.rs` scans within a radius derived from map reach and capped by render distance. Previously scanned tiles are now retained after unload.
 - Cache currently lives in RAM only. Long-session memory growth is possible because explored tiles are intentionally not pruned. Consider a bounded/persistent disk-backed region cache in a later step, without silently discarding explored terrain.
 - The world/dimension identity is represented by `minimap_dim`; dimension change clears current cache. Check world/server switching behaviour to ensure the cache is also cleared when a different world is joined in the same dimension.
-- Texture size 512 is not equivalent to a true large-region persistent map by itself.
-- The 512 texture is a sampled view of known cached chunk tiles, not a full world reveal.
-- Do not revert earlier map UI/touch changes while working on tile persistence.
+- Texture size 512 is a sampled view of known cached chunk tiles, not a full world reveal.
+- Do not revert earlier map UI/touch changes while working on map quality or tile persistence.
 
 ## Required next actions
-1. Check branch HEAD and workflow run `43723719706`. If failed, inspect job logs and fix only the actual failure. If queued/in progress, wait/check again.
+1. Recheck branch `starling`, workflow run #27, and any newer runs. Confirm which run actually builds source commit `244385c...`; ignore documentation-only runs for source verification.
 2. Confirm workflow still builds ARM64-v8a only.
-3. Once build succeeds, tell user the APK artifact location and ask them to test this exact behaviour:
+3. Once build succeeds, give user the exact APK artifact location and ask them to test:
    - Explore an area, open map, pan away from player.
    - Walk far enough that old chunks unload.
    - Reopen/pan map to the old area: explored terrain should still be visible.
    - Explore new chunks: they should be added.
    - Unexplored terrain should stay dark.
-4. If it works, next consider persistence across app restarts (serialize explored tiles per world/dimension) and proper cache lifecycle when switching servers/worlds.
-5. Update this file after every meaningful code change/build/test, keeping exact commit SHAs and workflow IDs.
+4. Next implement map image quality improvement: trace texture allocation/upload/sampler and HUD scaling before deciding whether to increase resolution. Test on POCO F7 and monitor performance.
+5. Later consider persistence across app restarts (serialize explored tiles per world/dimension) and robust cache lifecycle when switching servers/worlds.
+6. Update both `DEVELOPMENT_LOG.md` and this file after every meaningful change, CI result, or device test.
 
 ## User communication rules
 - Be direct and casual; user often says “bro”.
