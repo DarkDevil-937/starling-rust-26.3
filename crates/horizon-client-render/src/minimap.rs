@@ -16,7 +16,7 @@ use std::{fs, path::Path, time::{Duration, Instant}};
 use serde::{Deserialize, Serialize};
 
 /// The image's side in texels.
-pub const SIZE: usize = 512;
+pub const SIZE: usize = 1024;
 /// Marks a column the map cuts through (a wall at the player's height).
 const WALL: u8 = 0x80;
 /// Water's and lava's map colours (`MapColor.WATER`, `FIRE`).
