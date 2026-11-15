@@ -30,6 +30,7 @@ pub(super) struct ExtrasState {
     minimap_last_saved: Option<std::time::Instant>,
     /// Named map markers, saved alongside this world's explored tiles.
     map_waypoints: Vec<extras_hud::MapWaypoint>,
+    selected_waypoint: Option<usize>,
     /// Auto-reconnect's attempts at the current server.
     reconnect: Tracker,
     /// Starling: the fullscreen map (the M key) is open.
@@ -283,13 +284,38 @@ impl Game<'_> {
                             x: player.position.x,
                             z: player.position.z,
                         });
+                        self.extras.selected_waypoint = Some(self.extras.map_waypoints.len() - 1);
                         self.save_map_waypoints();
                     }
                 } else if hit(by + 4.0 * (side + 6.0)) {
-                    self.extras.map_waypoints.pop();
+                    let remove = self.extras.selected_waypoint
+                        .filter(|&index| index < self.extras.map_waypoints.len())
+                        .or_else(|| self.extras.map_waypoints.len().checked_sub(1));
+                    if let Some(index) = remove {
+                        self.extras.map_waypoints.remove(index);
+                    }
+                    self.extras.selected_waypoint = None;
                     self.save_map_waypoints();
                 } else {
-                    self.extras.map_drag = Some((id, x, y));
+                    let zoom = if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { DEFAULT_FULLSCREEN_MAP_ZOOM };
+                    let extent = f64::from(w.max(h) as f32 / scale);
+                    let center = self.player.as_ref().map(|player| (
+                        player.position.x + self.extras.map_pan[0],
+                        player.position.z + self.extras.map_pan[1],
+                    ));
+                    let selected = center.and_then(|center| self.extras.map_waypoints.iter().enumerate().rev().find_map(|(index, waypoint)| {
+                        let wx = f64::from(w as f32 / scale * 0.5)
+                            + (waypoint.x - center.0) / f64::from(zoom) * extent / minimap::SIZE as f64;
+                        let wy = f64::from(h as f32 / scale * 0.5)
+                            + (waypoint.z - center.1) / f64::from(zoom) * extent / minimap::SIZE as f64;
+                        ((wx - f64::from(x)).abs() <= 14.0 && (wy - f64::from(y)).abs() <= 14.0).then_some(index)
+                    }));
+                    self.extras.selected_waypoint = selected;
+                    if selected.is_some() {
+                        self.extras.map_drag = None;
+                    } else {
+                        self.extras.map_drag = Some((id, x, y));
+                    }
                 }
                 true
             }
@@ -347,6 +373,7 @@ impl Game<'_> {
                     Err(error) => log::warn!("Starling: could not load explored map cache {}: {error}", path.display()),
                 }
                 let waypoints_path = path.with_extension("waypoints.json");
+                self.extras.selected_waypoint = None;
                 self.extras.map_waypoints = match std::fs::read(&waypoints_path) {
                     Ok(bytes) => serde_json::from_slice::<Vec<extras_hud::MapWaypoint>>(&bytes)
                         .unwrap_or_default()
@@ -481,6 +508,7 @@ impl Game<'_> {
                     &look,
                     &coords,
                     &self.extras.map_waypoints,
+                    self.extras.selected_waypoint,
                     (view.x, view.z),
                     map_zoom,
                 );
