@@ -120,19 +120,5 @@ class BackfillTests(unittest.TestCase):
         self.assertIsNone(pl.guess_kind("x", None, []))
 
 
-class WorkflowTests(unittest.TestCase):
-    def test_workflow_is_safe(self):
-        text = (ROOT / ".github/workflows/pr-labels.yml").read_text()
-        run_lines = [l.strip() for l in text.splitlines() if l.strip().startswith("run:")]
-        self.assertEqual(run_lines, ["run: python3 tools/ci/pr_labels.py event"])
-        self.assertIn("pull_request_target", text)
-        self.assertIn("ref: main", text)
-        self.assertIn("persist-credentials: false", text)
-        for bad in ("contents: write", "issues: write", "head.sha", "head.ref", "github.event.pull_request.body"):
-            self.assertNotIn(bad, text)
-        # The checkout fetches the script alone.
-        self.assertIn("sparse-checkout: |\n            tools/ci/pr_labels.py\n          sparse-checkout-cone-mode", text)
-
-
 if __name__ == "__main__":
     unittest.main()

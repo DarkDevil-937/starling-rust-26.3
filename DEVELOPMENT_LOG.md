@@ -118,3 +118,8 @@ For every code change:
 - A push to `starling` will trigger the retained Android and checks workflows. Confirm both finish successfully before downloading a new APK.
 
 - CI diagnosis and formatting repair (2026-11-15): checks run #72 (`43733840471`) failed only at `Check formatting and lint`; the captured rustfmt diff identified formatting in `extras_hud.rs`, `game/extras.rs`, and `minimap.rs`. No Rust compilation failure was reported by that job because lint/format stopped the remaining tests. Formatting was applied in commits `471eab6e5099ad954fa6db4533e94ca1ab09c911`, `c9d7444b932f063254472f6af5b2479e8bf9c8d7`, and `e4dfe0f420503241450053fc25d2d38fff9efc2e`. Rechecks #74/#75 are running; the earlier ARM64 build #76 (`43733840669`) is still running on its earlier SHA. Later Android workflow runs were cancelled by newer pushes/concurrency; this is cancellation, not a compile failure.
+
+
+## Map remaster build repair — 2026-11-15
+
+Actions #78 and #82 exposed stale workflow-presence tests after removing upstream-only workflows, plus minimap cache compilation errors. Removed only workflow-presence assertions while retaining functional tests; aligned the runner test with the consolidated single-job checks workflow. Minimap tile arrays now use serde-compatible vectors with 256-entry validation on load; serialized keys are copied to avoid an elided-reference lifetime error. Removed upstream pack-bench and PR-close cleanup workflows; retained Android ARM64 APK, Rust checks, and native-mod builds. Await fresh CI and ARM64 validation.

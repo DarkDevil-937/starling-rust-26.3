@@ -92,10 +92,10 @@ impl Palette {
 #[derive(Clone, Serialize, Deserialize)]
 struct Tile {
     /// Map colour id per column (`z * 16 + x`), `| WALL` for cut walls.
-    color: [u8; 256],
-    height: [i16; 256],
+    color: Vec<u8>,
+    height: Vec<i16>,
     /// Water depth below the surface, for the map's water shading.
-    depth: [u8; 256],
+    depth: Vec<u8>,
     revision: u64,
     layer: Layer,
     #[serde(skip, default = "instant_now")]
@@ -166,9 +166,9 @@ fn top_of(chunk: &Chunk, air: u32, layer: Layer) -> i32 {
 fn scan_tile(chunk: &Chunk, palette: &Palette, air: u32, layer: Layer, revision: u64) -> Tile {
     let top = top_of(chunk, air, layer);
     let mut tile = Tile {
-        color: [0; 256],
-        height: [chunk.min_y() as i16; 256],
-        depth: [0; 256],
+        color: vec![0; 256],
+        height: vec![chunk.min_y() as i16; 256],
+        depth: vec![0; 256],
         revision,
         layer,
         scanned: Instant::now(),
@@ -418,6 +418,9 @@ impl Minimap {
                 "unsupported or oversized minimap cache",
             ));
         }
+        if cache.tiles.iter().any(|(_, tile)| tile.color.len() != 256 || tile.height.len() != 256 || tile.depth.len() != 256) {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid minimap tile dimensions"));
+        }
         self.tiles = cache.tiles.into_iter().collect();
         self.changed = true;
         self.persist_dirty = false;
@@ -435,13 +438,13 @@ impl Minimap {
         #[derive(Serialize)]
         struct Cache<'a> {
             schema: u32,
-            tiles: Vec<(&(i32, i32), &'a Tile)>,
+            tiles: Vec<((i32, i32), &'a Tile)>,
         }
         let parent = path.parent().ok_or_else(|| {
             std::io::Error::new(std::io::ErrorKind::InvalidInput, "cache path has no parent")
         })?;
         fs::create_dir_all(parent)?;
-        let tiles = self.tiles.iter().map(|(key, tile)| (key, tile)).collect();
+        let tiles = self.tiles.iter().map(|(key, tile)| (*key, tile)).collect();
         let bytes =
             serde_json::to_vec(&Cache { schema: 1, tiles }).map_err(std::io::Error::other)?;
         let temporary = path.with_extension("json.tmp");

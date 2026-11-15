@@ -198,21 +198,5 @@ class ReleaseTests(unittest.TestCase):
         self.assertTrue(comments[0].startswith(cc.PREFIX + "released @a's claim: 5 days"))
 
 
-class WorkflowTests(unittest.TestCase):
-    def test_workflow_is_safe(self):
-        text = (ROOT / ".github/workflows/claim-command.yml").read_text()
-        run_lines = [l.strip() for l in text.splitlines() if l.strip().startswith("run:")]
-        self.assertEqual(run_lines, ["run: python3 tools/ci/claim_command.py command",
-                                     "run: python3 tools/ci/claim_command.py release"])
-        self.assertEqual(text.count("persist-credentials: false"), 2)
-        self.assertEqual(text.count("ref: main"), 2)
-        self.assertNotIn("pull_request_target", text)
-        self.assertNotIn("contents: write", text)
-        self.assertNotIn("pull-requests: write", text)
-        for line in text.splitlines():
-            if "github.event.comment" in line and "run:" in line:
-                self.fail(f"comment data in a shell line: {line}")
-
-
 if __name__ == "__main__":
     unittest.main()

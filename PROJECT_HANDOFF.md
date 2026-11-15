@@ -167,3 +167,8 @@ Removed seven upstream-only workflows whose triggers/guards target `horizon-rust
 ## CI failure diagnosis — 2026-11-15
 
 The failed checks run #72 (SHA `d3eefa4f`) failed in the formatting/lint step due to rustfmt differences in `extras_hud.rs`, `game/extras.rs`, and `minimap.rs`. This was not an Android NDK or ARM64 compiler failure. The three files have since been formatted in commits `471eab6e5099ad954fa6db4533e94ca1ab09c911`, `c9d7444b932f063254472f6af5b2479e8bf9c8d7`, and `e4dfe0f420503241450053fc25d2d38fff9efc2e`. Recheck workflows #74/#75 were started; wait for the latest run on the current branch head. ARM64 run #76 is still running on an earlier commit. Android runs cancelled by later pushes are concurrency cancellations, not failures. Current build must be validated against the latest SHA before sharing an APK.
+
+
+## Workflow/build repair — 2026-11-15
+
+Current workflow set: android.yml (ARM64-v8a only), ci.yml, native-mods.yml. Removed pack-bench.yml (upstream-only benchmark) and cancel-on-close.yml (PR housekeeping not required for the normal build flow). Checks #78 exposed three workflow-presence tests for deleted files and one test requiring three self-hosted jobs despite the consolidated single-job CI design; those assertions now match the retained functional tooling and single-job checks. Android #82 found serde's unsupported 256-element arrays and a missing lifetime in the serialized cache tuple. Tile storage now uses vectors with strict 256-entry validation, and serialized keys are copied. Await fresh CI and ARM64 results before calling this build successful.

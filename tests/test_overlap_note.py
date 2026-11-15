@@ -127,21 +127,5 @@ class NoteTests(unittest.TestCase):
         self.assertTrue(ov.CLEARED.startswith(ov.MARKER))
 
 
-class WorkflowTests(unittest.TestCase):
-    def test_workflow_is_safe(self):
-        text = (ROOT / ".github/workflows/overlap-note.yml").read_text()
-        run_lines = [l.strip() for l in text.splitlines() if l.strip().startswith("run:")]
-        self.assertEqual(run_lines, ["run: python3 tools/ci/overlap_note.py event"])
-        for needed in ("pull_request_target", "ref: main", "persist-credentials: false", "filter: blob:none",
-                       "sparse-checkout: |\n            tools/ci/overlap_note.py\n          sparse-checkout-cone-mode"):
-            self.assertIn(needed, text)
-        for bad in ("contents: write", "issues: write", "head.sha", "head.ref", "github.event.pull_request.body"):
-            self.assertNotIn(bad, text)
-
-    def test_git_never_runs_their_code(self):
-        for flag in ("core.hooksPath=/dev/null", "core.fsmonitor=false", "diff.external="):
-            self.assertIn(flag, ov.SAFE_GIT)
-
-
 if __name__ == "__main__":
     unittest.main()

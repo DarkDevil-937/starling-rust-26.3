@@ -44,7 +44,7 @@ class ChecksRunnerTests(unittest.TestCase):
                 if "pull_request_target" in on:
                     # main's code only: every checkout is main's.
                     self.assertEqual(block.count("uses: actions/checkout"), block.count("ref: main"), where)
-        self.assertGreaterEqual(routed, 3)
+        self.assertGreaterEqual(routed, 1)
 
     def test_the_runners_refuse_forks_themselves(self):
         script = (ROOT / "tools/ci/checks-runners.sh").read_text()
