@@ -94,7 +94,7 @@ pub fn draw_big_map(
     waypoints: &[MapWaypoint],
     center: (f64, f64),
     zoom: f32,
-) -> [[f32; 4]; 4] {
+) -> [[f32; 4]; 5] {
     batch.fill(atlas, 0.0, 0.0, batch.width, batch.height, BACKGROUND);
     // Fill the landscape viewport without distorting the square terrain
     // texture: crop the vertical edges (or horizontal edges on portrait).
@@ -140,7 +140,7 @@ pub fn draw_big_map(
     batch.fill(atlas, 0.0, footer_y, batch.width, 30.0, 0xD9161B22);
     batch.text(
         atlas,
-        &format!("{} WAYPOINTS  •  DRAG TO PAN  •  W TO SAVE YOUR LOCATION", waypoints.len()),
+        &format!("{} WAYPOINTS  •  DRAG TO PAN  •  W ADD  •  D REMOVE LAST", waypoints.len()),
         14.0,
         footer_y + 10.0,
         rgba(220, 230, 240, 255),
@@ -169,13 +169,15 @@ pub fn draw_big_map(
     let zoom_in = [bx, pad + MAP_BTN + 6.0, MAP_BTN, MAP_BTN];
     let zoom_out = [bx, pad + 2.0 * (MAP_BTN + 6.0), MAP_BTN, MAP_BTN];
     let add_waypoint = [bx, pad + 3.0 * (MAP_BTN + 6.0), MAP_BTN, MAP_BTN];
+    let remove_waypoint = [bx, pad + 4.0 * (MAP_BTN + 6.0), MAP_BTN, MAP_BTN];
 
     draw_map_button(batch, atlas, close, "X");
     draw_map_button(batch, atlas, zoom_in, "+");
     draw_map_button(batch, atlas, zoom_out, "-");
     draw_map_button(batch, atlas, add_waypoint, "W");
+    draw_map_button(batch, atlas, remove_waypoint, "D");
 
-    [close, zoom_in, zoom_out, add_waypoint]
+    [close, zoom_in, zoom_out, add_waypoint, remove_waypoint]
 }
 
 fn draw_map_button(batch: &mut HudBatch, atlas: &HudAtlas, r: [f32; 4], label: &str) {
