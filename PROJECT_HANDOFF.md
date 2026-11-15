@@ -151,3 +151,5 @@ The newest source commits on `starling` add disk persistence, waypoint controls,
 - Follow-up source commits: `641bd654021fdda9dd13c50abf5fb25aff4ef5d2` (cache key comparison and safe waypoint-file rename), `f30aa07639d7f445780db5ef3a561d5cacaa5e95` (cache round-trip unit test), and `b105d832c65282838ba595e6f0f7452e5261667b` (portable test filename). These are included in the current branch state; CI still needs to validate them.
 
 - Waypoint interaction follow-up: `edd7986391bdf8dfe6d9efefdfadbbd0d23562cf`, `17cc3e7407dd2235c9ca9aed17c03af12153e48b`, and `2e87e1ec1ecc4b9d65421ff6e72dfa89f40b753d` add tap-to-select and selected-marker highlighting; D deletes the selected waypoint, or the last waypoint when none is selected. Auto-generated names remain; user rename/edit is not implemented.
+
+- Final source-format follow-ups: `116c662fb9dabd0d6b7e14a2a26e36024787078b`, `203aaa70efeb6f845333b092dad847407fb163fb`, `7cf868d9c255ad24d836bfa47cf5d13f2b0cabce`, `83837928fb9bbac20a8224b91da9171b39a06599`, and `bdd807d3ada5acc91316937855589956763b74f7`. These formatting-only commits are included in the branch head; validation is still pending.
