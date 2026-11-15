@@ -36,7 +36,7 @@ pub(super) struct ExtrasState {
 /// CPU time the minimap's tiles may take per frame.
 const MINIMAP_BUDGET: Duration = Duration::from_micros(300);
 /// One world block per fullscreen map texel gives the map its native detail.
-const DEFAULT_FULLSCREEN_MAP_ZOOM: f32 = 1.0;
+const DEFAULT_FULLSCREEN_MAP_ZOOM: f32 = 0.5;
 
 impl Game<'_> {
     fn extras_now(&self) -> f64 {
