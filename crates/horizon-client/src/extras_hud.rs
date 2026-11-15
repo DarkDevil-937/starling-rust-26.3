@@ -179,4 +179,5 @@ mod tests {
         assert_eq!(c.place(Corner::BottomRight, 50.0, 10.0), (348.0, 274.0));
         assert_eq!(c.place(Corner::BottomLeft, 10.0, 10.0), (2.0, 288.0));
     }
-               }
+    }
+}
