@@ -742,7 +742,7 @@ mod tests {
         let path = std::env::temp_dir().join(format!(
             "starling-minimap-cache-{}-{}.json",
             std::process::id(),
-            std::thread::current().name().unwrap_or("test")
+            "roundtrip"
         ));
         let _ = std::fs::remove_file(&path);
         assert!(map.save_to(&path).unwrap());
