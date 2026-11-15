@@ -37,7 +37,7 @@ User says fullscreen map quality/resolution is very low. This is the next priori
 - Do not blindly increase texture size. First trace texture allocation/upload, GPU sampler filtering (nearest/linear), viewport scaling/cropping, and zoom-to-blocks-per-pixel. Determine whether blur comes from source resolution, filtering, or stretching.
 - Target: crisp readable terrain at multiple zoom levels, smooth pan/zoom, and map gestures must not move the player.
 - Balance sharpness against RAM/GPU memory and frame time on POCO F7.
-- A first map-quality source change is now committed: `crates/horizon-client/src/game/extras.rs` defines `DEFAULT_FULLSCREEN_MAP_ZOOM = 1.0` and uses it for every fullscreen-map zoom fallback. The previous fallback was 2.0 blocks per pixel, which skipped alternate world blocks and reduced terrain detail. The new default samples one block per map texel without increasing texture size or GPU memory. Build and device test are pending. Investigation confirms the 512×512 image is copied at full declared size into the `horizon/minimap` atlas slot, and `horizon/` sprites are excluded from atlas shrinking. Inspect the standard sampler's default filtering and fullscreen zoom/blocks-per-pixel before editing. Since the map stores one colour per world block, increasing SIZE alone may just display more world rather than improve detail.
+- A first sampling improvement changed the fullscreen default from 2.0 to 1.0 blocks per pixel; a follow-up map interaction update sets the starting zoom to 0.5 blocks per pixel so terrain appears larger on screen (less world area visible; still block-level map data). Latest commits `7d9d8fb...`, `9a2e6e3...`, and `cedc058...` now also retain the in-memory map cache through title/disconnect screens, offset the player marker according to map pan, and replace chunky fullscreen controls with a restrained flat HUD. See `DEVELOPMENT_LOG.md` for exact files and limitations. Build and device test pending. Investigation confirms the 512×512 image is copied at full declared size into the `horizon/minimap` atlas slot, and `horizon/` sprites are excluded from atlas shrinking. Inspect the standard sampler's default filtering and fullscreen zoom/blocks-per-pixel before editing. Since the map stores one colour per world block, increasing SIZE alone may just display more world rather than improve detail.
 
 ## Current source state
 - Latest known branch HEAD: check GitHub branch `starling` before editing; the latest documentation commit records successful run #27 and the map-quality investigation. Latest source-code commits: `13cacf9da4c46edf7980ba5214cee7e8b1c35c6d` and follow-up `b121e010167582aee202c7077a848d2484058c79` (fullscreen map default sampling detail). Check branch `starling` for any newer documentation commits.
@@ -81,9 +81,10 @@ In `crates/horizon-client-render/src/minimap.rs`, `Minimap::update()` previously
 - Texture size 512 is a sampled view of known cached chunk tiles, not a full world reveal.
 - Do not revert earlier map UI/touch changes while working on map quality or tile persistence.
 
-## 2026-11-15 quality investigation and first fix
+## 2026-11-15 quality investigation and map interaction update
 - No source change yet. See `DEVELOPMENT_LOG.md` for details: atlas slot is not intentionally downscaled; map is a per-block colour raster; inspect default sampler and fullscreen zoom/blocks-per-pixel before deciding whether to increase resolution.
-- First fix committed in `13cacf9...` and normalized in `b121e010...`; latest ARM64 CI result and device validation still pending.
+- Latest map interaction commits: `7d9d8fb...` (cache/marker), `9a2e6e3...` (fullscreen HUD), `cedc058...` (closer starting zoom). Latest ARM64 CI result and device validation still pending.
+- Cache survives leaving/rejoining while app process remains alive, but is not persisted to disk; different worlds in the same dimension still need identity isolation.
 - User has not yet tested a map-quality build.
 
 ## Required next actions
