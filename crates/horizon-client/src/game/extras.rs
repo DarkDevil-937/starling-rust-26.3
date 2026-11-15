@@ -56,9 +56,14 @@ impl Game<'_> {
     }
 
     fn save_minimap_cache(&mut self) {
-        let Some(path) = self.minimap_cache_path() else { return; };
+        let Some(path) = self.minimap_cache_path() else {
+            return;
+        };
         if let Err(error) = self.extras.minimap.save_to(&path) {
-            log::warn!("Starling: could not save explored map cache {}: {error}", path.display());
+            log::warn!(
+                "Starling: could not save explored map cache {}: {error}",
+                path.display()
+            );
         } else {
             self.extras.minimap_last_saved = Some(std::time::Instant::now());
         }
@@ -67,10 +72,12 @@ impl Game<'_> {
     fn save_map_waypoints(&self) {
         let Some(path) = self.minimap_cache_path() else { return; };
         let path = path.with_extension("waypoints.json");
-        let Some(parent) = path.parent() else { return; };
+        let Some(parent) = path.parent() else {
+            return;
+        };
         if let Err(error) = std::fs::create_dir_all(parent).and_then(|()| {
-            let bytes = serde_json::to_vec(&self.extras.map_waypoints)
-                .map_err(std::io::Error::other)?;
+            let bytes =
+                serde_json::to_vec(&self.extras.map_waypoints).map_err(std::io::Error::other)?;
             let temporary = path.with_extension("waypoints.json.tmp");
             std::fs::write(&temporary, bytes)?;
             std::fs::rename(&temporary, &path)
@@ -193,8 +200,18 @@ impl Game<'_> {
         let view = View {
             // The terrain view pans independently; the player marker is offset
             // in the HUD by the inverse of this displacement.
-            x: p.position.x + if self.extras.big_map { self.extras.map_pan[0] } else { 0.0 },
-            z: p.position.z + if self.extras.big_map { self.extras.map_pan[1] } else { 0.0 },
+            x: p.position.x
+                + if self.extras.big_map {
+                    self.extras.map_pan[0]
+                } else {
+                    0.0
+                },
+            z: p.position.z
+                + if self.extras.big_map {
+                    self.extras.map_pan[1]
+                } else {
+                    0.0
+                },
             yaw: self.yaw,
             rotate: m.rotate,
             blocks_per_pixel: m.blocks_per_pixel,
@@ -300,7 +317,9 @@ impl Game<'_> {
                         self.save_map_waypoints();
                     }
                 } else if hit(by + 4.0 * (side + 6.0)) {
-                    let remove = self.extras.selected_waypoint
+                    let remove = self
+                        .extras
+                        .selected_waypoint
                         .filter(|&index| index < self.extras.map_waypoints.len())
                         .or_else(|| self.extras.map_waypoints.len().checked_sub(1));
                     if let Some(index) = remove {
@@ -315,17 +334,15 @@ impl Game<'_> {
                         DEFAULT_FULLSCREEN_MAP_ZOOM
                     };
                     let extent = f64::from(w.max(h) as f32 / scale);
-                    let center = self.player.as_ref().map(|player| (
-                        player.position.x + self.extras.map_pan[0],
-                        player.position.z + self.extras.map_pan[1],
-                    ));
+                    let center = self.player.as_ref().map(|player| {
+                        (
+                            player.position.x + self.extras.map_pan[0],
+                            player.position.z + self.extras.map_pan[1],
+                        )
+                    });
                     let selected = center.and_then(|center| {
-                        self.extras
-                            .map_waypoints
-                            .iter()
-                            .enumerate()
-                            .rev()
-                            .find_map(|(index, waypoint)| {
+                        self.extras.map_waypoints.iter().enumerate().rev().find_map(
+                            |(index, waypoint)| {
                                 let wx = f64::from(w as f32 / scale * 0.5)
                                     + (waypoint.x - center.0) / f64::from(zoom) * extent
                                         / minimap::SIZE as f64;
@@ -335,7 +352,8 @@ impl Game<'_> {
                                 ((wx - f64::from(x)).abs() <= 14.0
                                     && (wy - f64::from(y)).abs() <= 14.0)
                                     .then_some(index)
-                            })
+                            },
+                        )
                     });
                     self.extras.selected_waypoint = selected;
                     if selected.is_some() {
@@ -366,7 +384,11 @@ impl Game<'_> {
                 true
             }
             winit::event::TouchPhase::Ended | winit::event::TouchPhase::Cancelled => {
-                if self.extras.map_drag.is_some_and(|(finger, _, _)| finger == id) {
+                if self
+                    .extras
+                    .map_drag
+                    .is_some_and(|(finger, _, _)| finger == id)
+                {
                     self.extras.map_drag = None;
                 }
                 true
@@ -529,10 +551,10 @@ impl Game<'_> {
             let map_extent = batch.height.max(batch.width);
             let player_offset = if big {
                 (
-                    (-self.extras.map_pan[0] / f64::from(map_zoom)
-                        * f64::from(map_extent) / minimap::SIZE as f64) as f32,
-                    (-self.extras.map_pan[1] / f64::from(map_zoom)
-                        * f64::from(map_extent) / minimap::SIZE as f64) as f32,
+                    (-self.extras.map_pan[0] / f64::from(map_zoom) * f64::from(map_extent)
+                        / minimap::SIZE as f64) as f32,
+                    (-self.extras.map_pan[1] / f64::from(map_zoom) * f64::from(map_extent)
+                        / minimap::SIZE as f64) as f32,
                 )
             } else {
                 (0.0, 0.0)
