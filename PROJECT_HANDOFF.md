@@ -162,3 +162,8 @@ The newest source commits on `starling` add disk persistence, waypoint controls,
 ## Workflow cleanup — 2026-11-15
 
 Removed seven upstream-only workflows whose triggers/guards target `horizon-rust/horizon` or `main`, not this Starling fork's active `starling` branch. Kept the Android ARM64 APK workflow, Rust checks, PR cancellation helper, native-mod build workflow, and manual pack benchmark. See `DEVELOPMENT_LOG.md` for the exact file list. This does not delete historical Actions runs or artifacts.
+
+ 
+## CI failure diagnosis — 2026-11-15
+
+The failed checks run #72 (SHA `d3eefa4f`) failed in the formatting/lint step due to rustfmt differences in `extras_hud.rs`, `game/extras.rs`, and `minimap.rs`. This was not an Android NDK or ARM64 compiler failure. The three files have since been formatted in commits `471eab6e5099ad954fa6db4533e94ca1ab09c911`, `c9d7444b932f063254472f6af5b2479e8bf9c8d7`, and `e4dfe0f420503241450053fc25d2d38fff9efc2e`. Recheck workflows #74/#75 were started; wait for the latest run on the current branch head. ARM64 run #76 is still running on an earlier commit. Android runs cancelled by later pushes are concurrency cancellations, not failures. Current build must be validated against the latest SHA before sharing an APK.
