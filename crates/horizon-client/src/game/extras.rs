@@ -282,7 +282,11 @@ impl Game<'_> {
                     };
                     self.extras.map_zoom = (z * 0.8).clamp(0.125, 64.0);
                 } else if hit(by + 2.0 * (side + 6.0)) {
-                    let z = if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { DEFAULT_FULLSCREEN_MAP_ZOOM };
+                    let z = if self.extras.map_zoom > 0.0 {
+                        self.extras.map_zoom
+                    } else {
+                        DEFAULT_FULLSCREEN_MAP_ZOOM
+                    };
                     self.extras.map_zoom = (z / 0.8).clamp(0.25, 64.0);
                 } else if hit(by + 3.0 * (side + 6.0)) {
                     if let Some(player) = self.player.as_ref() {
@@ -322,10 +326,12 @@ impl Game<'_> {
                             .enumerate()
                             .rev()
                             .find_map(|(index, waypoint)| {
-                        let wx = f64::from(w as f32 / scale * 0.5)
-                            + (waypoint.x - center.0) / f64::from(zoom) * extent / minimap::SIZE as f64;
-                        let wy = f64::from(h as f32 / scale * 0.5)
-                            + (waypoint.z - center.1) / f64::from(zoom) * extent / minimap::SIZE as f64;
+                                let wx = f64::from(w as f32 / scale * 0.5)
+                                    + (waypoint.x - center.0) / f64::from(zoom) * extent
+                                        / minimap::SIZE as f64;
+                                let wy = f64::from(h as f32 / scale * 0.5)
+                                    + (waypoint.z - center.1) / f64::from(zoom) * extent
+                                        / minimap::SIZE as f64;
                                 ((wx - f64::from(x)).abs() <= 14.0
                                     && (wy - f64::from(y)).abs() <= 14.0)
                                     .then_some(index)
@@ -344,7 +350,11 @@ impl Game<'_> {
                 if let Some((finger, ox, oy)) = self.extras.map_drag
                     && finger == id
                 {
-                    let z = if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { DEFAULT_FULLSCREEN_MAP_ZOOM };
+                    let z = if self.extras.map_zoom > 0.0 {
+                        self.extras.map_zoom
+                    } else {
+                        DEFAULT_FULLSCREEN_MAP_ZOOM
+                    };
                     // The square source texture is cover-scaled to the viewport.
                     // Convert screen drag distance back to world blocks.
                     let viewport = f64::from(w.max(h) as f32 / scale);
