@@ -407,7 +407,10 @@ impl Minimap {
         let cache: Cache = serde_json::from_slice(&bytes)
             .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))?;
         if cache.schema != 1 || cache.tiles.len() > 100_000 {
-            return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unsupported or oversized minimap cache"));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "unsupported or oversized minimap cache",
+            ));
         }
         self.tiles = cache.tiles.into_iter().collect();
         self.changed = true;
