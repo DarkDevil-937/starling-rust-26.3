@@ -250,6 +250,8 @@ impl Game<'_> {
             map
         })
     }
+    // The Android-only touch HUD calls this; host CI builds without that module enabled.
+    #[allow(dead_code)]
     pub(super) fn fullscreen_map_open(&self) -> bool {
         self.extras.big_map
     }

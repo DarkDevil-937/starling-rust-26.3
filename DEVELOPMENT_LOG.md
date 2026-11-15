@@ -147,3 +147,10 @@ Actions #78 and #82 exposed stale workflow-presence tests after removing upstrea
 - Checks run #84 (ID 43738219505) on commit `8bbd72d00879caedbe98aadefa1b79c1382feccb` failed at `cargo +stable fmt --all -- --check` due to one remaining line-wrap difference in `crates/horizon-client/src/game/extras.rs`. Clippy and Rust tests were not reached.
 - Android run #88 (ID 43738219528) for the same commit succeeded. It produced `starling-apk-arm64-v8a` (artifact ID 14171324177) and `starling-symbols-arm64-v8a` (artifact ID 14171319351). The APK is built, but full CI validation remains incomplete until checks pass.
 - Applied the exact remaining rustfmt line wrapping to `game/extras.rs`. A new push should trigger fresh checks and ARM64 build; prefer the artifact from that final commit once both workflows pass.
+
+
+## 2026-11-15 — CI lint diagnosis and fix
+
+- Checks run #85 (ID 43739638523) for commit `842f7c06bf747ff1c9a9ed75b8bc4bc8a801e515` passed rustfmt and repository Python tests, then failed during Rust clippy/compile with `-D dead-code`: `Game::fullscreen_map_open` is referenced by the Android touch HUD but unused in the host CI feature/target configuration.
+- Kept the method for the Android call site and annotated it with a narrowly scoped `#[allow(dead_code)]`, with a comment explaining the target-specific use. No blanket lint suppression.
+- Android run #89 (ID 43739638532) succeeded for ARM64-v8a and built an APK from the same commit, but do not recommend it yet: the checks failed. Await a fresh checks run and a matching successful ARM64 run for this lint fix.

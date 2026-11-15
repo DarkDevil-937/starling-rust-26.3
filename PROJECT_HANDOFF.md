@@ -202,3 +202,11 @@ User reports explored chunks persist after restarting and map quality is now acc
 - Do not ask the user to install yet. Prefer the APK from the next successful Android run on the post-format-fix commit after checks also pass.
 - User has not device-tested the virtual cursor/waypoint build. After a verified build, test tap-to-position, add waypoint away from player, arrow-key cursor navigation, Enter activation, map controls without moving player, and cache persistence.
 - Historical Actions run deletion is not supported by the currently connected GitHub actions; no run history was deleted.
+
+
+## Latest CI diagnosis — 2026-11-15 (run #89)
+
+- Current source commit before lint repair: `842f7c06bf747ff1c9a9ed75b8bc4bc8a801e515`.
+- Checks #85 (ID `43739638523`) passed formatting and Python tests, then failed compiling/linting because `Game::fullscreen_map_open` is only called by the Android touch HUD, which is not compiled in the host checks target; warning is denied as an error. The Android target build #89 succeeded on this source, corroborating the method's Android use.
+- Narrow fix applied: document Android-only use and add `#[allow(dead_code)]` to that one method only. Do not suppress dead-code warnings globally.
+- Wait for checks and ARM64 APK build on the new lint-fix commit before telling the user to install. User device test is still pending.
