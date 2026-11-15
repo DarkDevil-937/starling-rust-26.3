@@ -14,7 +14,6 @@ use horizon_client::{
 };
 use std::{path::PathBuf, time::Duration};
 use sha2::Digest;
-use serde::{Deserialize, Serialize};
 use winit::{event::MouseButton, keyboard::KeyCode};
 
 #[derive(Default)]
