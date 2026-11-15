@@ -181,6 +181,9 @@ impl Game<'_> {
             map
         })
     }
+    pub(super) fn fullscreen_map_open(&self) -> bool {
+        self.extras.big_map
+    }
     /// Starling: M opens and closes the fullscreen map, and Escape closes it
     /// before it can open the pause menu. True when the key was used.
     pub(super) fn map_key_press(&mut self, key: KeyCode) -> bool {
