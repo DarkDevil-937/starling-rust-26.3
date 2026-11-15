@@ -154,7 +154,15 @@ impl Game<'_> {
     }
     /// The minimap shown: a native mod's (`native_minimap`).
     fn minimap_wanted(&self) -> Option<NativeMinimap> {
-        self.native_minimap_now()
+        // Starling: a mod's minimap wins; with none installed, show a built-in
+        // default so no native-mod compile is needed.
+        self.native_minimap_now().or(Some(NativeMinimap {
+            corner: Corner::TopRight,
+            size: 72.0,
+            blocks_per_pixel: 1.0,
+            rotate: false,
+            round: false,
+        }))
     }
     /// Refresh the minimap's tiles within the frame budget, recompose its
     /// image when the view or a tile changed, and queue the upload.
