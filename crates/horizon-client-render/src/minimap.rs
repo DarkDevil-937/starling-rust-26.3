@@ -289,12 +289,10 @@ impl Minimap {
         let palette = self.palette.get_or_insert_with(|| Palette::new(facts));
         let started = Instant::now();
         let air = world.air.0;
-        // Tiles of unloaded or distant chunks go.
-        self.tiles.retain(|k, _| {
-            (k.0 - center.0).abs() <= radius + 2
-                && (k.1 - center.1).abs() <= radius + 2
-                && world.chunks.contains_key(k)
-        });
+        // Keep every explored chunk tile for this world/dimension, even after
+        // the game unloads that chunk or the player pans far away. Only newly
+        // loaded chunks are scanned below; compose() can continue drawing the
+        // cached terrain from these retained tiles.
         let mut scanned = 0;
         for ring in 0..=radius {
             for (dx, dz) in ring_offsets(ring) {
