@@ -220,17 +220,31 @@ pub fn draw_big_map(
 
     // Xaero-style virtual cursor; arrow keys move it and Enter activates controls.
     let (cursor_x, cursor_y) = cursor;
-    batch.fill(atlas, cursor_x - 10.0, cursor_y - 1.0, 20.0, 2.0, 0xFF_101820);
-    batch.fill(atlas, cursor_x - 1.0, cursor_y - 10.0, 2.0, 20.0, 0xFF_101820);
+    batch.fill(
+        atlas,
+        cursor_x - 10.0,
+        cursor_y - 1.0,
+        20.0,
+        2.0,
+        0xFF_101820,
+    );
+    batch.fill(
+        atlas,
+        cursor_x - 1.0,
+        cursor_y - 10.0,
+        2.0,
+        20.0,
+        0xFF_101820,
+    );
     batch.fill(atlas, cursor_x - 8.0, cursor_y - 1.0, 16.0, 1.0, 0xFFFFE17A);
     batch.fill(atlas, cursor_x - 1.0, cursor_y - 8.0, 1.0, 16.0, 0xFFFFE17A);
     let extent = batch.width.max(batch.height);
     let cursor_world_x = center.0
-        + f64::from(cursor_x - batch.width * 0.5) * f64::from(zoom)
-            * crate::minimap::SIZE as f64 / f64::from(extent);
+        + f64::from(cursor_x - batch.width * 0.5) * f64::from(zoom) * crate::minimap::SIZE as f64
+            / f64::from(extent);
     let cursor_world_z = center.1
-        + f64::from(cursor_y - batch.height * 0.5) * f64::from(zoom)
-            * crate::minimap::SIZE as f64 / f64::from(extent);
+        + f64::from(cursor_y - batch.height * 0.5) * f64::from(zoom) * crate::minimap::SIZE as f64
+            / f64::from(extent);
     batch.text(
         atlas,
         &format!("X {:.1}  Z {:.1}", cursor_world_x, cursor_world_z),

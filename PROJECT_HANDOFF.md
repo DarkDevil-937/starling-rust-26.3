@@ -185,3 +185,10 @@ User reports explored chunks persist after restarting and map quality is now acc
 - Latest source-code commit: 8e282c8d69dac644632ab0652e2d56cb1f3b45f2. Latest branch HEAD is documentation-only commit 48f2e0775212f66ca41966b6bac4b62d77dff638.
 - Latest validation: checks #81 (43737709898) in progress and Android #85 (43737709847) pending for the latest SHA. Earlier #80/#84 are still running on the previous cursor commit, not the final code.
 - Next: wait for checks #81 and ARM64 build #85, fix any errors, then device-test cursor placement, buttons, pan/zoom, waypoint persistence, and player-input isolation.
+
+
+## CI repair note — 2026-11-15
+
+- Latest checks run #83 failed at `cargo +stable fmt --all -- --check`; the log identified formatting-only differences in `extras_hud.rs` and `game/extras.rs`. Rust clippy and tests were not reached in that run.
+- Applied formatting corrections matching the CI diff. Android run #87 was building ARM64-v8a for the same source code at the time of inspection; no success claim until its artifact and final checks are confirmed.
+- Always inspect workflow job logs after failures, fix the specific root cause, and rebuild before asking the user to install. User needs the ARM64-v8a APK artifact from the final successful run, not an arbitrary source commit.

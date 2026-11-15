@@ -263,7 +263,10 @@ impl Game<'_> {
             let [width, height] = self.touch_size();
             let scale = HudBatch::new([width, height]).scale;
             let bounds = [width as f32 / scale, height as f32 / scale];
-            let cursor = self.extras.map_cursor.unwrap_or([bounds[0] * 0.5, bounds[1] * 0.5]);
+            let cursor = self
+                .extras
+                .map_cursor
+                .unwrap_or([bounds[0] * 0.5, bounds[1] * 0.5]);
             let step = 18.0;
             let moved = match key {
                 KeyCode::ArrowLeft => Some([cursor[0] - step, cursor[1]]),
@@ -353,10 +356,10 @@ impl Game<'_> {
                     self.extras.map_zoom = (z / 0.8).clamp(0.125, 64.0);
                 } else if hit(by + 3.0 * (side + 6.0)) {
                     if let Some(player) = self.player.as_ref() {
-                        let cursor = self.extras.map_cursor.unwrap_or([
-                            w as f32 / scale * 0.5,
-                            h as f32 / scale * 0.5,
-                        ]);
+                        let cursor = self
+                            .extras
+                            .map_cursor
+                            .unwrap_or([w as f32 / scale * 0.5, h as f32 / scale * 0.5]);
                         let zoom = if self.extras.map_zoom > 0.0 {
                             self.extras.map_zoom
                         } else {
@@ -367,7 +370,9 @@ impl Game<'_> {
                         let center_z = player.position.z + self.extras.map_pan[1];
                         let world_x = center_x
                             + f64::from(cursor[0] - w as f32 / scale * 0.5)
-                                * f64::from(zoom) * minimap::SIZE as f64 / extent;
+                                * f64::from(zoom)
+                                * minimap::SIZE as f64
+                                / extent;
                         let world_z = center_z
                             + f64::from(cursor[1] - h as f32 / scale * 0.5)
                                 * f64::from(zoom) * minimap::SIZE as f64 / extent;

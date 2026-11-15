@@ -133,3 +133,10 @@ Actions #78 and #82 exposed stale workflow-presence tests after removing upstrea
 - Build status before this update: Android run #83 (ID 43735462980) succeeded for ARM64-v8a and produced artifact starling-apk-arm64-v8a (artifact 14170610432). Checks run #79 (ID 43735462920) failed only at cargo fmt --check due to formatting in game/extras.rs and minimap.rs; no compilation/tests were reached.
 - The available GitHub connection exposes Actions run/artifact reads and job reruns, but no workflow-run deletion operation. Historical run deletion was not performed.
 - Pending: run rustfmt, inspect cursor/world-coordinate transform, run checks and ARM64 APK workflow, then device-test cursor placement, button activation, and player-input isolation.
+
+
+## 2026-11-15 — CI formatting repair
+
+- Inspected checks run #83 on branch `starling` (commit `8b5246749165bb4ab920a8b65070ceb590fcf01c`). The failure was specifically `cargo +stable fmt --all -- --check`, with formatting diffs only in `extras_hud.rs` and `game/extras.rs`; clippy had not run yet.
+- Applied the exact rustfmt layout shown in the CI log to those two files. Android run #87 on the same source tree was still building ARM64-v8a at inspection time; its result is not yet treated as validation.
+- Process improvement: inspect failed job logs and repair the reported cause before asking the user to rerun anything. Only recommend downloading the APK artifact from the final successful ARM64 Android run whose commit contains the cursor/waypoint changes.
