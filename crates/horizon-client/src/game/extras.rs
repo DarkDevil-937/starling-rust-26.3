@@ -287,7 +287,7 @@ impl Game<'_> {
                     } else {
                         DEFAULT_FULLSCREEN_MAP_ZOOM
                     };
-                    self.extras.map_zoom = (z / 0.8).clamp(0.25, 64.0);
+                    self.extras.map_zoom = (z / 0.8).clamp(0.125, 64.0);
                 } else if hit(by + 3.0 * (side + 6.0)) {
                     if let Some(player) = self.player.as_ref() {
                         let number = self.extras.map_waypoints.len() + 1;
