@@ -14,6 +14,7 @@ use horizon_client::{
 };
 use std::{path::PathBuf, time::Duration};
 use sha2::Digest;
+use serde::{Deserialize, Serialize};
 use winit::{event::MouseButton, keyboard::KeyCode};
 
 #[derive(Default)]
@@ -28,6 +29,8 @@ pub(super) struct ExtrasState {
     /// Stable per-save/per-dimension key for disk-backed explored tiles.
     minimap_cache_key: Option<String>,
     minimap_last_saved: Option<std::time::Instant>,
+    /// Named map markers, saved alongside this world's explored tiles.
+    map_waypoints: Vec<extras_hud::MapWaypoint>,
     /// Auto-reconnect's attempts at the current server.
     reconnect: Tracker,
     /// Starling: the fullscreen map (the M key) is open.
@@ -58,6 +61,21 @@ impl Game<'_> {
             log::warn!("Starling: could not save explored map cache {}: {error}", path.display());
         } else {
             self.extras.minimap_last_saved = Some(std::time::Instant::now());
+        }
+    }
+
+    fn save_map_waypoints(&self) {
+        let Some(path) = self.minimap_cache_path() else { return; };
+        let path = path.with_extension("waypoints.json");
+        let Some(parent) = path.parent() else { return; };
+        if let Err(error) = std::fs::create_dir_all(parent).and_then(|()| {
+            let bytes = serde_json::to_vec(&self.extras.map_waypoints)
+                .map_err(std::io::Error::other)?;
+            let temporary = path.with_extension("waypoints.json.tmp");
+            std::fs::write(&temporary, bytes)?;
+            std::fs::rename(temporary, path)
+        }) {
+            log::warn!("Starling: could not save map waypoints: {error}");
         }
     }
 
@@ -258,6 +276,16 @@ impl Game<'_> {
                 } else if hit(by + 2.0 * (side + 6.0)) {
                     let z = if self.extras.map_zoom > 0.0 { self.extras.map_zoom } else { DEFAULT_FULLSCREEN_MAP_ZOOM };
                     self.extras.map_zoom = (z / 0.8).clamp(0.25, 64.0);
+                } else if hit(by + 3.0 * (side + 6.0)) {
+                    if let Some(player) = self.player.as_ref() {
+                        let number = self.extras.map_waypoints.len() + 1;
+                        self.extras.map_waypoints.push(extras_hud::MapWaypoint {
+                            name: format!("Waypoint {number}"),
+                            x: player.position.x,
+                            z: player.position.z,
+                        });
+                        self.save_map_waypoints();
+                    }
                 } else {
                     self.extras.map_drag = Some((id, x, y));
                 }
@@ -316,6 +344,16 @@ impl Game<'_> {
                     Ok(false) => {}
                     Err(error) => log::warn!("Starling: could not load explored map cache {}: {error}", path.display()),
                 }
+                let waypoints_path = path.with_extension("waypoints.json");
+                self.extras.map_waypoints = match std::fs::read(&waypoints_path) {
+                    Ok(bytes) => serde_json::from_slice::<Vec<extras_hud::MapWaypoint>>(&bytes)
+                        .unwrap_or_default()
+                        .into_iter()
+                        .filter(|w| w.name.len() <= 48 && w.x.is_finite() && w.z.is_finite())
+                        .take(128)
+                        .collect(),
+                    Err(_) => Vec::new(),
+                };
             }
         } else if self.extras.minimap_dim != Some(self.dim) {
             self.save_minimap_cache();
@@ -435,7 +473,15 @@ impl Game<'_> {
             if big {
                 let (px, pz) = self.player.as_ref().map_or((view.x, view.z), |p| (p.position.x, p.position.z));
                 let coords = format!("X: {:.1}  Z: {:.1}", px, pz);
-                extras_hud::draw_big_map(batch, atlas, &look, &coords);
+                extras_hud::draw_big_map(
+                    batch,
+                    atlas,
+                    &look,
+                    &coords,
+                    &self.extras.map_waypoints,
+                    (view.x, view.z),
+                    map_zoom,
+                );
             } else {
                 extras_hud::draw_minimap(batch, atlas, &mut corners, &look);
             }
