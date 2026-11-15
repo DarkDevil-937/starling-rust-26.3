@@ -51,6 +51,13 @@ pub struct MinimapLook {
     pub player_offset: (f32, f32),
 }
 
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct MapWaypoint {
+    pub name: String,
+    pub x: f64,
+    pub z: f64,
+}
+
 pub const MAP_BTN: f32 = 36.0;
 
 pub fn draw_minimap(
@@ -84,7 +91,10 @@ pub fn draw_big_map(
     atlas: &HudAtlas,
     look: &MinimapLook,
     coords: &str,
-) -> [[f32; 4]; 3] {
+    waypoints: &[MapWaypoint],
+    center: (f64, f64),
+    zoom: f32,
+) -> [[f32; 4]; 4] {
     batch.fill(atlas, 0.0, 0.0, batch.width, batch.height, BACKGROUND);
     // Fill the landscape viewport without distorting the square terrain
     // texture: crop the vertical edges (or horizontal edges on portrait).
@@ -121,25 +131,51 @@ pub fn draw_big_map(
             u32::MAX,
         );
     }
-    // Compact information strip: readable coordinates without covering the map.
-    let pad = 12.0;
-    let info_w = (HudBatch::text_width(atlas, coords).max(82.0) + 18.0).min(batch.width - 104.0);
-    batch.fill(atlas, pad, pad, info_w, 38.0, 0xD9161B22);
-    batch.fill(atlas, pad, pad, 2.0, 38.0, 0xFF_65B8E8);
-    batch.text(atlas, "WORLD MAP", pad + 9.0, pad + 5.0, rgba(130, 205, 255, 255), true);
-    batch.text(atlas, coords, pad + 9.0, pad + 19.0, rgba(245, 248, 252, 255), true);
+    // Polished full-width header and compact footer keep the terrain dominant.
+    batch.fill(atlas, 0.0, 0.0, batch.width, 54.0, 0xD9161B22);
+    batch.fill(atlas, 0.0, 52.0, batch.width, 2.0, 0xFF_65B8E8);
+    batch.text(atlas, "WORLD MAP", 16.0, 10.0, rgba(130, 205, 255, 255), true);
+    batch.text(atlas, coords, 16.0, 27.0, rgba(245, 248, 252, 255), true);
+    let footer_y = batch.height - 30.0;
+    batch.fill(atlas, 0.0, footer_y, batch.width, 30.0, 0xD9161B22);
+    batch.text(
+        atlas,
+        &format!("{} WAYPOINTS  •  DRAG TO PAN  •  W TO SAVE YOUR LOCATION", waypoints.len()),
+        14.0,
+        footer_y + 10.0,
+        rgba(220, 230, 240, 255),
+        true,
+    );
+
+    // Waypoint positions use the same world-to-screen transform as the terrain.
+    let extent = batch.height.max(batch.width);
+    for waypoint in waypoints {
+        let x = batch.width * 0.5
+            + ((waypoint.x - center.0) / f64::from(zoom) * f64::from(extent)
+                / crate::minimap::SIZE as f64) as f32;
+        let y = batch.height * 0.5
+            + ((waypoint.z - center.1) / f64::from(zoom) * f64::from(extent)
+                / crate::minimap::SIZE as f64) as f32;
+        if x >= 10.0 && y >= 58.0 && x <= batch.width - 10.0 && y <= batch.height - 34.0 {
+            batch.fill(atlas, x - 5.0, y - 5.0, 10.0, 10.0, 0xFFFFC857);
+            batch.fill(atlas, x - 1.0, y - 1.0, 2.0, 2.0, 0xFF202020);
+            batch.text(atlas, &waypoint.name, x + 8.0, y - 4.0, rgba(255, 230, 160, 255), true);
+        }
+    }
 
     let pad = 8.0;
     let bx = batch.width - pad - MAP_BTN;
     let close = [bx, pad, MAP_BTN, MAP_BTN];
     let zoom_in = [bx, pad + MAP_BTN + 6.0, MAP_BTN, MAP_BTN];
     let zoom_out = [bx, pad + 2.0 * (MAP_BTN + 6.0), MAP_BTN, MAP_BTN];
+    let add_waypoint = [bx, pad + 3.0 * (MAP_BTN + 6.0), MAP_BTN, MAP_BTN];
 
     draw_map_button(batch, atlas, close, "X");
     draw_map_button(batch, atlas, zoom_in, "+");
     draw_map_button(batch, atlas, zoom_out, "-");
+    draw_map_button(batch, atlas, add_waypoint, "W");
 
-    [close, zoom_in, zoom_out]
+    [close, zoom_in, zoom_out, add_waypoint]
 }
 
 fn draw_map_button(batch: &mut HudBatch, atlas: &HudAtlas, r: [f32; 4], label: &str) {
