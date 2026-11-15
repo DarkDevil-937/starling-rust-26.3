@@ -235,3 +235,11 @@ User reports explored chunks persist after restarting and map quality is now acc
 - Android's exact compiler error was E0616: `mobile_controls.rs` reads `ExtrasState.big_map`, but the field was private to the sibling `extras` module. Narrowly changed the field to `pub(super)`, exposing it within the parent `game` module only.
 - Checks' exact error was `dead_code` on the no-audio `Audio::open_named` stub. That stub has no callers because `set_device` is separately compiled for no-audio builds. Removed the unused stub; the real `open_named` remains compiled only with `feature = "audio"`.
 - These are source-level corrections to the two actual errors; fresh checks and the ARM64-v8a Android build are required before considering the repair validated. No APK from #92 was produced.
+
+
+## Latest UI request — Xaero-style fullscreen map
+
+- User-provided reference shows a full-bleed terrain map, narrow black left rail, compact X/Y/Z + biome strip at top centre, compass at top right, small right-side map controls, and bottom zoom indicator.
+- A visual-only pass is being implemented in `crates/horizon-client/src/extras_hud.rs`: left rail and waypoint count, centred coordinate panel, compass, smaller controls and zoom label. Existing pan/zoom/cursor/waypoint behaviour and five control hitboxes are intended to remain intact.
+- Biome name and a functional settings menu are not implemented because the current draw call does not supply biome data and no settings action exists.
+- Current baseline: Android #93 succeeded for ARM64-v8a on `274988e4a3dcb84e2cc58e5d984c0df7b26a0c45`; Checks #89 failed two minimap tests. This new UI source must be separately checked and built. No device test of the reference-style UI yet.

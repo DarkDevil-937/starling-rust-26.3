@@ -178,3 +178,12 @@ Actions #78 and #82 exposed stale workflow-presence tests after removing upstrea
 - Android's exact compiler error was E0616: `mobile_controls.rs` reads `ExtrasState.big_map`, but the field was private to the sibling `extras` module. Narrowly changed the field to `pub(super)`, exposing it within the parent `game` module only.
 - Checks' exact error was `dead_code` on the no-audio `Audio::open_named` stub. That stub has no callers because `set_device` is separately compiled for no-audio builds. Removed the unused stub; the real `open_named` remains compiled only with `feature = "audio"`.
 - These are source-level corrections to the two actual errors; fresh checks and the ARM64-v8a Android build are required before considering the repair validated. No APK from #92 was produced.
+
+
+## 2026-11-15 — Xaero-inspired fullscreen map HUD pass
+
+- User supplied two screenshots: current Starling fullscreen map and a Xaero-style reference. The requested target is a map-first fullscreen layout with a slim dark left rail, compact coordinate strip near the top centre, compass at the upper right, compact right-side controls, and a zoom readout at the bottom.
+- Updated `crates/horizon-client/src/extras_hud.rs` to replace the oversized upper-left WORLD card and large right-side buttons with that hierarchy. Terrain remains full-screen; map pan/zoom, cursor, waypoint markers, and existing control hitbox return values are retained. The close/zoom/add/delete controls remain the same five actions.
+- This is a visual HUD pass only. It does not add biome-name detection, settings menu functionality, new map sampling/detail, or change terrain coverage. The left rail's waypoint count is informational.
+- CI validation is pending. Previous Android run #93 succeeded for ARM64-v8a on commit `274988e4a3dcb84e2cc58e5d984c0df7b26a0c45`; Checks #89 failed in two minimap tests. Those test expectations must be corrected separately after inspecting the exact assertions/logs. The #93 APK is not this new UI pass.
+- Device validation of the Xaero-style layout is pending; do not claim the UI is complete until user tests the new build on POCO F7.

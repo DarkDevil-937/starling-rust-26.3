@@ -58,7 +58,7 @@ pub struct MapWaypoint {
     pub z: f64,
 }
 
-pub const MAP_BTN: f32 = 36.0;
+pub const MAP_BTN: f32 = 30.0;
 
 pub fn draw_minimap(
     batch: &mut HudBatch,
@@ -162,19 +162,41 @@ pub fn draw_big_map(
             u32::MAX,
         );
     }
-    // Compact information card on the left; terrain remains edge-to-edge.
-    batch.fill(atlas, 10.0, 10.0, 190.0, 52.0, 0xE0161B22);
-    batch.fill(atlas, 10.0, 10.0, 2.0, 52.0, 0xFF_65B8E8);
-    batch.text(atlas, "WORLD", 20.0, 17.0, rgba(130, 205, 255, 255), true);
-    batch.text(atlas, coords, 20.0, 31.0, rgba(245, 248, 252, 255), true);
+    // Xaero-inspired map chrome: a slim left rail and a compact coordinate
+    // strip. Keep most of the screen available for terrain.
+    batch.fill(atlas, 0.0, 0.0, 42.0, batch.height, 0xE8000000);
+    batch.fill(atlas, 41.0, 0.0, 1.0, batch.height, 0x553A3A3A);
+    batch.text(atlas, "MAP", 10.0, 14.0, rgba(235, 240, 245, 255), true);
+    batch.fill(atlas, 10.0, 31.0, 22.0, 1.0, 0xFF_707070);
     batch.text(
         atlas,
-        &format!("{} WAYPOINTS", waypoints.len()),
-        20.0,
-        45.0,
-        rgba(190, 205, 220, 255),
+        &format!("{}", waypoints.len()),
+        16.0,
+        42.0,
+        rgba(255, 220, 130, 255),
         true,
     );
+
+    let info_w = (HudBatch::text_width(atlas, coords) + 24.0).clamp(150.0, 280.0);
+    let info_x = (batch.width - info_w) * 0.5;
+    batch.fill(atlas, info_x, 8.0, info_w, 30.0, 0xD9000000);
+    batch.fill(atlas, info_x, 37.0, info_w, 1.0, 0x66777777);
+    batch.text(
+        atlas,
+        coords,
+        info_x + 12.0,
+        18.0,
+        rgba(245, 248, 252, 255),
+        true,
+    );
+
+    // A compact compass in the upper-right corner, separate from the controls.
+    let compass_x = batch.width - 62.0;
+    batch.fill(atlas, compass_x, 8.0, 52.0, 40.0, 0xC9000000);
+    batch.text(atlas, "N", compass_x + 23.0, 11.0, rgba(255, 255, 255, 255), true);
+    batch.text(atlas, "W", compass_x + 5.0, 25.0, rgba(205, 210, 220, 255), true);
+    batch.text(atlas, "E", compass_x + 42.0, 25.0, rgba(205, 210, 220, 255), true);
+    batch.text(atlas, "S", compass_x + 23.0, 34.0, rgba(205, 210, 220, 255), true);
 
     // Waypoint positions use the same world-to-screen transform as the terrain.
     let extent = batch.height.max(batch.width);
@@ -204,19 +226,32 @@ pub fn draw_big_map(
         }
     }
 
-    let pad = 8.0;
-    let bx = batch.width - pad - MAP_BTN;
+    let pad = 56.0;
+    let bx = batch.width - 8.0 - MAP_BTN;
     let close = [bx, pad, MAP_BTN, MAP_BTN];
-    let zoom_in = [bx, pad + MAP_BTN + 6.0, MAP_BTN, MAP_BTN];
-    let zoom_out = [bx, pad + 2.0 * (MAP_BTN + 6.0), MAP_BTN, MAP_BTN];
-    let add_waypoint = [bx, pad + 3.0 * (MAP_BTN + 6.0), MAP_BTN, MAP_BTN];
-    let remove_waypoint = [bx, pad + 4.0 * (MAP_BTN + 6.0), MAP_BTN, MAP_BTN];
+    let zoom_in = [bx, pad + MAP_BTN + 5.0, MAP_BTN, MAP_BTN];
+    let zoom_out = [bx, pad + 2.0 * (MAP_BTN + 5.0), MAP_BTN, MAP_BTN];
+    let add_waypoint = [bx, pad + 3.0 * (MAP_BTN + 5.0), MAP_BTN, MAP_BTN];
+    let remove_waypoint = [bx, pad + 4.0 * (MAP_BTN + 5.0), MAP_BTN, MAP_BTN];
 
+    batch.fill(atlas, bx - 4.0, pad - 4.0, MAP_BTN + 8.0, 5.0 * MAP_BTN + 4.0 * 5.0 + 8.0, 0xB8000000);
     draw_map_button(batch, atlas, close, "X");
     draw_map_button(batch, atlas, zoom_in, "+");
     draw_map_button(batch, atlas, zoom_out, "-");
     draw_map_button(batch, atlas, add_waypoint, "W");
     draw_map_button(batch, atlas, remove_waypoint, "D");
+
+    let zoom_label = format!("{:.1}x", 1.0 / zoom.max(0.001));
+    let zoom_w = HudBatch::text_width(atlas, &zoom_label) + 16.0;
+    batch.fill(atlas, (batch.width - zoom_w) * 0.5, batch.height - 22.0, zoom_w, 16.0, 0xC9000000);
+    batch.text(
+        atlas,
+        &zoom_label,
+        (batch.width - HudBatch::text_width(atlas, &zoom_label)) * 0.5,
+        batch.height - 18.0,
+        rgba(245, 248, 252, 255),
+        true,
+    );
 
     // Xaero-style virtual cursor; arrow keys move it and Enter activates controls.
     let (cursor_x, cursor_y) = cursor;
@@ -259,12 +294,12 @@ pub fn draw_big_map(
 
 fn draw_map_button(batch: &mut HudBatch, atlas: &HudAtlas, r: [f32; 4], label: &str) {
     let [x, y, w, h] = r;
-    // Flat translucent controls with a fine outline; no chunky bevels.
-    batch.fill(atlas, x, y, w, h, 0xD91A222C);
-    batch.fill(atlas, x, y, w, 1.0, 0xFF_8A9AAA);
-    batch.fill(atlas, x, y + h - 1.0, w, 1.0, 0xFF_8A9AAA);
-    batch.fill(atlas, x, y, 1.0, h, 0xFF_8A9AAA);
-    batch.fill(atlas, x + w - 1.0, y, 1.0, h, 0xFF_8A9AAA);
+    // Flat, compact controls on a dark Xaero-like toolbar.
+    batch.fill(atlas, x, y, w, h, 0xE6000000);
+    batch.fill(atlas, x, y, w, 1.0, 0xFF_777777);
+    batch.fill(atlas, x, y + h - 1.0, w, 1.0, 0xFF_777777);
+    batch.fill(atlas, x, y, 1.0, h, 0xFF_777777);
+    batch.fill(atlas, x + w - 1.0, y, 1.0, h, 0xFF_777777);
     let tw = HudBatch::text_width(atlas, label);
     let tx = x + (w - tw) / 2.0;
     let ty = y + (h - 8.0) / 2.0 - 1.0;
