@@ -203,7 +203,7 @@ def why_failed(log):
                 if item.strip():
                     detail.append(item.rstrip()[:220])
             return ("This mod does not compile on this version of the game. "
-                    + "\\n".join(detail))[:1100]
+                    + "\n".join(detail))[:1100]
     return "The build failed."
 
 
