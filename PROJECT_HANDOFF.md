@@ -332,3 +332,5 @@ Read this section first; the sections above are historical.
 - Android ARM64-v8a run #117 / ID `43834058899` was in progress when this handoff was written. Checks and Android run outcomes must be checked before declaring completion. Do not install an earlier APK; only use the artifact from a successful ARM64-v8a run containing this commit.
 - Device validation still required on POCO F7: test cursor tap on zoom-in and zoom-out; launcher LMB hold + cursor movement pans; launcher RMB opens context menu; verify gameplay controls do not break/place/move while map is open.
 - See `DEVELOPMENT_LOG.md` for the dated implementation and CI record.
+
+- Follow-up source commit `0e7d467eeb4147d0931436e9792a59055bb98a4b` also prevents map taps from invoking the text-field click/keyboard path. Validate this latest source SHA, not the earlier click-fix commit alone.
