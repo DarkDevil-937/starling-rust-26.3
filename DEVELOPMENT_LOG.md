@@ -258,3 +258,13 @@ User feedback that drove this pass: the fullscreen map still had a row of on-map
 - Fixes: call `self.map_pointer_state(...)` from the Game implementation; add a narrow `map_cursor_dragged` stub returning false to the extracted test fixture so that test continues to isolate native mouse-drag dispatch rather than map-pan behaviour.
 - Follow-up commits: `28657e689763b470ad813707933abbd895398ad8` (receiver fix), `febcfeaf5a3152d2893e938f6436068d7d38e482` (test fixture fix). Both preserve the preceding OpenCode commit as ancestry.
 - These fixes are not CI-verified until the new Checks and ARM64-v8a Android workflows complete. No APK from Android #109 was produced; only ARM64-v8a is in scope.
+
+
+## 2026-11-16 — Fix fullscreen-map virtual cursor touch routing
+
+- User clarified the intended interaction: retain the launcher/game virtual-mouse cursor; move it around the map, hold left-click, and move the cursor to pan. Do not replace this with one-finger direct map dragging.
+- Diagnosed the stuck-centre cursor: while playing, `mobile_touch()` routed ordinary touches through gameplay `TouchControls::update()`, then treated its joystick/camera delta as virtual-mouse movement. The menu-only `android_virtual_touch()` path—which uses `TouchUi::relative_touch()` to move the actual cursor and emits `CursorMoved` events—was never used for fullscreen-map touches.
+- Fix commit: `ec11abcb949d459b4b252e55dd510f28bc5b4223` — `Route fullscreen map touches through virtual mouse`.
+- In `crates/horizon-client/src/game/mobile_controls.rs`, after `android_aux_touch()` has first had the opportunity to consume launcher button touches, free-screen touches while the fullscreen map is open are now routed through `android_virtual_touch()` and returned. This preserves launcher button handling while making the real virtual cursor move. The existing `CursorMoved` event then reaches `map_cursor_dragged()`; when left-click is held, the map pans.
+- This is a targeted input-path fix, not a full map redesign. No UI geometry or zoom-button size changed in this commit.
+- CI and device verification: pending. Must verify Checks and ARM64-v8a Android workflow for this exact source commit, then have the user test cursor movement, left-click drag pan, gameplay-input blocking, and M/Esc close. Do not recommend an older APK as containing this fix.
