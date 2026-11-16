@@ -263,11 +263,11 @@ impl Game<'_> {
         } else {
             tc.poll_state()
         };
-        // The fullscreen map keeps the touch controls drawn, but the player does
-        // not move, aim or act while it is open. The attack button becomes the
-        // held left mouse button (drag the map) and use becomes right click.
+        // The fullscreen map keeps the launcher HUD visible, but gameplay
+        // controls are blocked. Only the launcher's dedicated virtual-mouse
+        // LMB/RMB actions (handled by android_aux_touch/android_menu_mouse)
+        // may interact with the map.
         let map_open = self.extras.big_map && self.screen == Screen::Playing;
-        let map_pointer = (state.triggers[1] > 0.5, state.triggers[0] > 0.5);
         if map_open {
             state = horizon_client::gamepad::PadState::default();
         }
@@ -295,9 +295,6 @@ impl Game<'_> {
         let perspective = std::mem::take(&mut tc.perspective_requested) && !map_open;
         let debug = std::mem::take(&mut tc.debug_requested) && !map_open;
         let settings = std::mem::take(&mut tc.settings_requested) && !map_open;
-        if map_open && shown {
-            self.map_pointer_state(map_pointer.0, map_pointer.1);
-        }
         if let Some(held_use) = tap
             && !map_open
         {
@@ -1282,6 +1279,11 @@ impl Game<'_> {
             return Ok(true);
         }
         if t.phase == TouchPhase::Cancelled {
+            // A cancelled launcher-button touch must not leave map LMB/RMB
+            // latched. Release through the same dispatcher used on normal lift.
+            for right in self.mobile.ui.release_all_mouse() {
+                self.android_menu_mouse(events, id, right, false)?;
+            }
             self.mobile.ui.cancel();
             self.android_release_touch_keys(true);
             return Ok(true);
