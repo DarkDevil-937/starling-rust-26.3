@@ -35,6 +35,9 @@ struct Game { drag_button: Option<i32>, physical_buttons: HashSet<i32>, physical
     cursor: (f32, f32), modifiers: u32, synthetic: bool, open: bool, cancel: bool, handled: usize,
     calls: RefCell<Vec<(i32, [f32; 2], (f32, f32))>> }
 impl Game {
+    // The extracted cursor-event fixture tests the native drag hook independently
+    // of fullscreen-map panning, which lives on the real Game implementation.
+    fn map_cursor_dragged(&mut self, _previous: (f32, f32)) -> bool { false }
     fn pad_synthetic_input(&self) -> bool { self.synthetic }
     fn screen_view_now(&self) -> Option<View> { self.open.then_some(View { mouse: self.cursor }) }
     fn native_screen_mouse_dragged_pre(&self, view: &View, button: i32, delta: [f32; 2], modifiers: u32, canceled: &mut bool) {
