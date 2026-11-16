@@ -196,3 +196,55 @@ Actions #78 and #82 exposed stale workflow-presence tests after removing upstrea
 - Checks #90 failed only at `cargo +stable fmt --all -- --check`. The reported diffs were formatting in `crates/horizon-client/src/extras_hud.rs` (compass labels and two long `batch.fill` calls); the workflow did not reach Clippy or Rust tests.
 - Applied the exact rustfmt layout requested by the CI diff. No runtime behaviour was intentionally changed.
 - This formatting correction is committed separately and triggers fresh Checks and ARM64-v8a Android workflows. Await those results before treating the corrected branch head as fully validated.
+
+
+## 2026-11-16 — Xaero-like map screen: no button panel, built-in pointer, tiny zoom buttons
+
+User feedback that drove this pass: the fullscreen map still had a row of on-map buttons, the gameplay controls were visible over it, and the "cursor" should not be a new drawing at all — the game already ships a virtual mouse pointer (the Android touch HUD's pointer) and that is the one to show. The user asked for Xaero's layout instead: clean map, small zoom in/out buttons at the bottom-right, real in-game pointer, right-click map menu.
+
+### Source commits (branch `starling`)
+
+| Commit | Change |
+| --- | --- |
+| `ae314e1c4` | Removed the old five-button map panel; map actions moved to keys/wheel/touch gestures; added the right-click context menu (`Create Waypoint`, `Delete Waypoint`, `Close`). |
+| `be39bb75d` | Restored only the two tiny 22px zoom buttons at the bottom-right with shared rect helpers (`map_zoom_button_rects`) used for both drawing and hit-testing; drew a hand-made crosshair cursor. |
+| `fc3934169` | Moved the fullscreen-map wheel-zoom hook above the extracted scroll-normalisation block so `tests/test_mouse_scrolling_hook.py` compiles the extracted `game.rs` window. |
+| `76f9be8be` | rustfmt layout for the new map code (CI formatting failure). |
+| `92053296c` | Removed now-unused `CROSS`/`FLAG`/`TRASH` icon tables (CI clippy `dead_code`, warnings are errors). |
+| `47b6bb965` | `#[allow(dead_code)]` on `fullscreen_map_touch` for host builds, matching the existing Android-only comment pattern used for `map_key_press`. |
+| `127605daa` | Removed the hand-drawn crosshair; the map now draws the game's own pointer with `android_control_ui::draw_pointer` at the map cursor. |
+| `e895ea765` | Updated the two stale `horizon-client-render` minimap tests (see below). |
+| `6d124a249` | The map pointer now draws unconditionally while the map is open (the map needs it to aim waypoints); size still comes from `virtual_mouse_pointer_scale`. |
+
+### Final map behaviour
+
+- `M` toggles the fullscreen map; `Escape` closes the context menu first, then the map.
+- While `extras.big_map` is true, `mobile_draw()` returns before drawing anything, so **no gameplay controls** (movement, attack, jump, hotbar buttons) are drawn over the map.
+- Only on-map controls: two 22px buttons stacked at the bottom-right (`map_zoom_button_rects`), zoom **in** on top and **out** below, 8px from the edge, 4px apart. Both are hit-tested in `fullscreen_map_touch` (touch) and `map_mouse_click` (mouse).
+- Pointer: `game/extras.rs::draw_extras` draws `android_control_ui::draw_pointer` after `extras_hud::draw_big_map` in the same HUD batch, at `extras.map_cursor`. Draw order matters: `hud()` calls `draw_touch` before `draw_extras`, so a pointer drawn in `mobile_draw` would sit underneath the map.
+- The pointer follows the map cursor: touch start sets it, a left click sets it, arrow keys/WASD move it 18 gui px, and it defaults to the map centre when unset.
+- Keys while the map is open: `=`/`-` (and numpad +/-) zoom, `Enter` creates a waypoint at the cursor, `Delete`/`Backspace` removes the selected/last waypoint, right-click opens the menu.
+- Touch: drag pans (`map_drag`), tap positions the cursor or activates a waypoint/menu row; gestures never move the player.
+
+### CI repair details (exact causes)
+
+1. `tests/test_mouse_scrolling_hook.py` extracts the wheel branch between the `let (raw_x, raw_y) = match delta` marker and `// ScreenEvent.MouseScrolled.Pre`. The first wheel hook was placed **after** that marker, so the extracted fixture called a method that was not extracted. The hook now sits above the marker; keep it there.
+2. Clippy (`-D warnings`) failed on `dead_code` for icon constants and for `fullscreen_map_touch`, which only the Android-only `mobile_controls` module calls. Fixes were narrow, not global allows.
+3. `crates/horizon-client-render/src/minimap.rs` tests were stale from the fork's earlier map work, not from this pass:
+   - `the_image_is_north_up_or_turns_with_the_player` hard-coded 128px coordinates (centre 64). It now derives the centre from `SIZE / 2` (SIZE is 1024 in this fork).
+   - `tiles_fill_nearest_first_and_follow_changes` asserted that unloaded chunks drop their tiles. This fork intentionally retains explored tiles for the persistent map, so the test now asserts the tile is kept.
+   These were the only two failing Rust tests; the rest of the 1325 tests passed.
+
+### Verification — 2026-11-16
+
+- Final source commit: `6d124a249` ("Map: always show the virtual mouse pointer while the map is open").
+- Checks run `43813504214`: **success** (public-tree check, Python tests, rustfmt, clippy for workspace + server build, Rust tests).
+- Android run `43813504273`: **success**, ARM64-v8a only. Artifacts: `starling-apk-arm64-v8a` ID `14202201740` (34,459,349 bytes) and `starling-symbols-arm64-v8a` ID `14202236490`. Run URL: https://github.com/DarkDevil-937/starling-rust-26.3/actions/runs/43813504273
+- Earlier green build for the same behaviour: run `43811831085` on `127605daa`, APK artifact `14201361149`.
+- Device test: **pending**. User has not reported results for this build.
+
+### Known limitations / next checks
+
+- No device verification: button size/placement, pointer size, menu placement and touch feel are approximations of Xaero, not measured on the POCO F7.
+- The pointer is positioned by touch/click/keys; the touch HUD's virtual-mouse stick is hidden on the map, so the stick cannot move the pointer there. Decide with the user whether the stick should stay available.
+- A documentation-only commit also triggers `android.yml`; do not mistake that run for a new source build.

@@ -1,6 +1,6 @@
 # Starling project handoff
 
-Last updated: 2026-11-15
+Last updated: 2026-11-16
 
 ## Project identity
 - Repository: https://github.com/DarkDevil-937/starling-rust-26.3
@@ -251,3 +251,40 @@ User reports explored chunks persist after restarting and map quality is now acc
 - Exact failure: `cargo +stable fmt --all -- --check` reported three formatting hunks in `crates/horizon-client/src/extras_hud.rs`; Clippy and Rust correctness tests were skipped because the formatting step stopped the job.
 - Applied rustfmt's exact requested layout to those three areas. No functional changes intended.
 - New commit should trigger Checks and ARM64-v8a Android workflows. Verify both fresh run conclusions and artifact list before recommending the new build. The #94 APK belongs to the previous source SHA and is not the formatting-fix commit.
+
+
+## Current authoritative status — 2026-11-16 (Xaero-like map screen)
+
+Read this section first; the sections above are historical.
+
+- Latest source + docs commit before this note: `6d124a249` — "Map: always show the virtual mouse pointer while the map is open".
+- Branch: `starling`. Remote: `origin` = `DarkDevil-937/starling-rust-26.3`. `upstream/starling` is starling-client/starling; always pass `-R DarkDevil-937/starling-rust-26.3` to `gh run` commands or they resolve against upstream and 404.
+- Checks run `43813504214`: **success** (public tree, Python tests, rustfmt, clippy workspace + server build, Rust tests).
+- Android run `43813504273`: **success**, ARM64-v8a only.
+  - APK: `starling-apk-arm64-v8a`, artifact ID `14202201740` (34,459,349 bytes).
+  - Symbols: `starling-symbols-arm64-v8a`, ID `14202236490`.
+  - URL: https://github.com/DarkDevil-937/starling-rust-26.3/actions/runs/43813504273
+- Device test: **pending**. Nothing in this pass is device-verified.
+
+### What the fullscreen map is now
+
+- No gameplay controls are drawn over the map: `mobile_draw()` in `crates/horizon-client/src/game/mobile_controls.rs` returns early when `self.extras.big_map` is true.
+- The only on-map buttons are two 22px zoom buttons at the bottom-right (`extras_hud::map_zoom_button_rects`), zoom in above zoom out. The same helper is used for drawing and for touch/mouse hit-testing, so they cannot drift apart.
+- The cursor is **not** a new drawing: `crates/horizon-client/src/game/extras.rs::draw_extras` draws the game's existing virtual mouse pointer (`android_control_ui::draw_pointer`) at `extras.map_cursor`, after `draw_big_map` in the same HUD batch. `hud()` calls `draw_touch` first, so the pointer must be drawn from the extras pass to appear above the map.
+- Right-click (and a tap on an existing waypoint) opens the map context menu: Create Waypoint / Delete Waypoint / Close.
+- Keys: `M` toggle, `Esc` close (menu first), WASD/arrows move the cursor 18px, wheel and `=`/`-` zoom, `Enter` waypoint at cursor, `Delete`/`Backspace` remove waypoint.
+- Touch: tap positions cursor / activates menu rows and waypoints, drag pans. Map gestures never move the player.
+
+### Constraints learned this pass (do not regress)
+
+- The fullscreen-map wheel hook in `game.rs` must stay **above** the `let (raw_x, raw_y) = match delta` line: `tests/test_mouse_scrolling_hook.py` extracts the branch from that marker, and a hook below it breaks the test compile.
+- Clippy runs with `-D warnings`. Android-only helpers called from `mobile_controls` (e.g. `fullscreen_map_touch`) need `#[allow(dead_code)]` plus the existing comment, not a crate-wide allow. Removing map buttons also means removing their icon tables.
+- `crates/horizon-client-render/src/minimap.rs` in this fork uses `SIZE = 1024` and deliberately keeps explored tiles after an unload. Tests that assume 128px coordinates or tile pruning are stale; two were corrected in `e895ea765`.
+- rustfmt is not installed in the agent environment; formatting must be verified through the `checks` workflow diff (`gh run view -R DarkDevil-937/starling-rust-26.3 <run> --log-failed`).
+
+### Next steps
+
+1. User installs the artifact above and reports specifically: pointer size/visibility, the two zoom buttons' size and spacing, menu position, and whether any gameplay controls still appear on the map.
+2. Adjust exact geometry values from that feedback rather than redesigning again.
+3. Open question for the user: should the virtual-mouse stick stay on screen while the map is open so the pointer can be moved without touching the map directly?
+4. Keep `DEVELOPMENT_LOG.md` updated with every change, run ID, and device result; the user requires full written process.
