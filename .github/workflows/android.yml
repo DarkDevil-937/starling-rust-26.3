@@ -97,6 +97,16 @@ jobs:
           sudo swapon "$where/release.swap"
           free -h
           echo "CARGO_BUILD_JOBS=3" >> "$GITHUB_ENV"
+      # Keep one preview signing identity across CI runs. Without the repository secret,
+      # build_apk.py creates target/android/debug.keystore; caching that file makes later
+      # Preview APKs update the installed app instead of getting a fresh random certificate.
+      - name: Restore the stable Preview signing key
+        if: env.RELEASE_BUILD != 'true'
+        uses: actions/cache@v4
+        with:
+          path: target/android/debug.keystore
+          key: starling-preview-signing-key-v1
+      # A configured key takes precedence over the cached fallback.
       # Where build_apk.py keeps its debug key (alias horizon-debug, password android).
       - name: Unpack the debug key
         if: env.RELEASE_BUILD != 'true'
