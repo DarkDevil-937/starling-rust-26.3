@@ -324,3 +324,10 @@ User feedback that drove this pass: the fullscreen map still had a row of on-map
 - Fix: include fullscreen-map mode in the HUD action hit-test's menu-enabled flag. Launcher LMB/RMB now reach `android_menu_mouse()` and its map-specific press/release routing. HUD key actions are sent to `map_key_press()` while the map is open instead of gameplay key handling.
 - The map still blocks gameplay pad state; this change only restores the launcher's own HUD action hit-testing. No direct finger-drag behavior added.
 - Checks and ARM64-v8a Android build pending; device verification still required.
+
+## 2026-11-16 — Preserve native-mod compiler source locations
+
+- Reproduced the shared failure path from the repository scripts: both the normal service and “Use GitHub (slower)” run the same native_build.sh pipeline, so changing build routes cannot bypass a source/API error.
+- Confirmed title::Button in crates/horizon-client/src/title.rs has no action field. The current server's why_failed() reduced plain Rust compiler output to only lines beginning with error, discarding the --> source file/line and code excerpt needed to identify the injected mod code.
+- Fix commit: 613d440680d303da43d85affeeccb8e3523abbee. The native-mod build server now preserves the first Rust diagnostic block, including source location and nearby excerpt, in the error returned to Starling.
+- This is a diagnostic fix, not yet the underlying E0560 source fix. The next failed compile should identify the exact file and line; use that to patch the offending mixin/mod compatibility code. No APK or successful native-mod build is claimed.
