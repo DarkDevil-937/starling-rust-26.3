@@ -191,10 +191,19 @@ def why_failed(log):
         named = re.match(r'(?:,\s*"file": "[^"]*")?,\s*"mod_id": "([a-z0-9_-]+)"', text[code.end() :])
         who = f"The mod {named[1]}" if named else "The mod"
         return f"{who} does not fit this game ({code[1]}): {code[2]}"[:600]
-    errors = [l for l in text.splitlines() if l.startswith("error")]
-    if errors:
-        lines = [l[:160] for l in errors[:4]]
-        return "This mod does not compile on this version of the game. " + " ".join(lines)[:520]
+    # Keep the compiler's source location and the short code excerpt. Without these,
+    # players only see "error[E0560]" and cannot tell which injected source is stale.
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        if re.match(r"^error(?:\[E\d+\])?:", line):
+            detail = []
+            for item in lines[index : index + 14]:
+                if detail and re.match(r"^error(?:\[E\d+\])?:", item):
+                    break
+                if item.strip():
+                    detail.append(item.rstrip()[:220])
+            return ("This mod does not compile on this version of the game. "
+                    + "\\n".join(detail))[:1100]
     return "The build failed."
 
 
