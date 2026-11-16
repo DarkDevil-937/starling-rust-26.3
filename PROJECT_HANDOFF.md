@@ -359,3 +359,11 @@ Read this section first; the sections above are historical.
 - To avoid forcing the user to uninstall the old app (and losing app-private files), the Preview variant was migrated to package ID `io.github.juanluci.starling.preview2`, label **Starling Preview (Stable)**. It installs alongside the old `.preview` package despite the signing mismatch.
 - Both `.preview` and `.preview2` resolve to the same shared-storage directory `StarlingPreview`, preserving access to game files there when storage permission is granted. App-private preferences/files do not transfer automatically. Keep the old app installed until the new build is tested.
 - Package migration commits: `827864706efd37eb2bd84e35a0fb3083e9aec5e8`, `e0d9fd41cc59b709a391cef52fe323882d9f4434`, workflow comment `1125e4ae73222f2749c440884b8d9dfb8b04427c`.
+
+
+## Fullscreen-map virtual cursor pan fix — 2026-11-16
+
+- Fix commit: `3d41ac8437e9977f2112043491e30ca61b15ccc7`.
+- Fullscreen map free-screen movement goes through `android_virtual_touch()`. Previously only `android_touch()` called `map_cursor_dragged()`, so the virtual cursor could move while held launcher LMB failed to pan.
+- `android_virtual_touch()` now passes its previous cursor position to `map_cursor_dragged()` after each cursor update while the fullscreen map is open. The map's existing held-left-button and no-context-menu guards control when panning occurs.
+- Launcher LMB/RMB dispatch and map zoom hit testing are unchanged. No direct finger-drag behavior added. Test latest ARM64-v8a build on POCO F7 before calling this device-verified.
