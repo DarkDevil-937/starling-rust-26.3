@@ -1649,7 +1649,12 @@ impl Game<'_> {
             && let Some(action) = self
                 .mobile
                 .ui
-                .action(b.width, b.height, p, self.pad_in_menu())
+                .action(
+                    b.width,
+                    b.height,
+                    p,
+                    self.pad_in_menu() || (self.extras.big_map && self.screen == Screen::Playing),
+                )
         {
             {
                 self.mobile.controls.clear();
@@ -1718,6 +1723,10 @@ impl Game<'_> {
                         }
                     }
                     Action::Key(key) => {
+                        if self.extras.big_map && self.screen == Screen::Playing {
+                            self.map_key_press(key);
+                            return Ok(true);
+                        }
                         if key != KeyCode::F3 && !self.mobile.ui.key_held(KeyCode::F3) {
                             self.mobile.ui.expanded = false;
                         }
