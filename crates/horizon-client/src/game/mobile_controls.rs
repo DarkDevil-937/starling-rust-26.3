@@ -429,6 +429,19 @@ impl Game<'_> {
             }
             _ => {}
         }
+        // In fullscreen-map mode, route free-screen touches through the same
+        // relative virtual-mouse path used by menus. The gameplay touch-control
+        // joystick delta is not a cursor delta, so using it here leaves the map
+        // pointer stuck at its spawn position. Touches already consumed above
+        // still operate launcher buttons (including the left-click hold).
+        if self.extras.big_map
+            && self.screen == Screen::Playing
+            && self.mobile.ui.virtual_mouse
+        {
+            self.android_virtual_touch(t, events, id);
+            return;
+        }
+
         let in_menu = self.pad_in_menu();
         self.mobile.controls.in_menu =
             in_menu && !(self.screen == Screen::Options && self.options_waiting_for_key());
