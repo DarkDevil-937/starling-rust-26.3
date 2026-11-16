@@ -360,6 +360,8 @@ impl Game<'_> {
             _ => false,
         }
     }
+    // The Android-only touch HUD calls this; host builds without that module enabled.
+    #[allow(dead_code)]
     /// Capture touches while the fullscreen map is open so they do not move the
     /// player. Tapping positions the cursor (and selects a waypoint if hit);
     /// dragging pans the map. Map actions use game controls/keys, not on-map buttons.
