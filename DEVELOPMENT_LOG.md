@@ -283,3 +283,5 @@ User feedback that drove this pass: the fullscreen map still had a row of on-map
 - The map's existing zoom hit rectangles and 22px compact button geometry were not changed; the fix connects the virtual cursor click to the existing hit test.
 - Verification: Android run #117 (ID `43834058899`) was triggered on this exact source commit; status was `in_progress` at the time of this log update. Checks workflow status must also be recorded after checking. Do not install an APK until the ARM64-v8a workflow succeeds and its artifact is confirmed.
 - ABI scope: ARM64-v8a only. Device retest is pending; do not describe the click fix as device-confirmed until the user tests it.
+
+- Small follow-up source commit: `0e7d467eeb4147d0931436e9792a59055bb98a4b` — `Keep map clicks out of text field handling`. It prevents map cursor taps from invoking the unrelated text-field/keyboard helper. This is included in the latest branch source and must be included in final CI validation.
