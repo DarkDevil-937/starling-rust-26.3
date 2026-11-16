@@ -285,3 +285,13 @@ User feedback that drove this pass: the fullscreen map still had a row of on-map
 - ABI scope: ARM64-v8a only. Device retest is pending; do not describe the click fix as device-confirmed until the user tests it.
 
 - Small follow-up source commit: `0e7d467eeb4147d0931436e9792a59055bb98a4b` — `Keep map clicks out of text field handling`. It prevents map cursor taps from invoking the unrelated text-field/keyboard helper. This is included in the latest branch source and must be included in final CI validation.
+
+
+## 2026-11-16 — Make fullscreen-map mouse controls match launcher buttons
+
+- User clarified that map interaction must use the launcher's dedicated on-screen virtual-mouse buttons, not gameplay attack/use triggers and not direct one-finger map dragging.
+- Source commit: `86a8f371d291913941dbcccfa0f0cc4cb0100f03`.
+- In `crates/horizon-client/src/game/mobile_controls.rs`, fullscreen-map mode now blocks all gameplay pad state without translating attack/use triggers into map LMB/RMB. The dedicated launcher `Action::MouseButton` path remains the sole button route: LMB down/up calls the map left-click handler (hold + move cursor pans; release stops), and RMB down opens the map context menu.
+- Also fixed cancelled launcher-button touches: any held virtual mouse button is explicitly released through the same map dispatcher before touch state is cancelled, preventing a stuck drag or stuck right-click state.
+- The existing cursor-relative movement path remains in place. Zoom-in/out still use the compact existing hitboxes and are activated by moving the cursor over a button and pressing launcher LMB.
+- Verification: CI and device test are pending for this source commit. Android target remains ARM64-v8a only. Do not install an older artifact or claim device verification until the latest ARM64 workflow succeeds and the POCO F7 test is completed.
