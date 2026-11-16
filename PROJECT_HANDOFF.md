@@ -334,3 +334,14 @@ Read this section first; the sections above are historical.
 - See `DEVELOPMENT_LOG.md` for the dated implementation and CI record.
 
 - Follow-up source commit `0e7d467eeb4147d0931436e9792a59055bb98a4b` also prevents map taps from invoking the text-field click/keyboard path. Validate this latest source SHA, not the earlier click-fix commit alone.
+
+
+## Latest launcher-button map input correction — 2026-11-16
+
+- Source commit: `86a8f371d291913941dbcccfa0f0cc4cb0100f03`.
+- Fullscreen map no longer interprets gameplay attack/use triggers as map left/right clicks. Gameplay pad state is blocked while the map is open; only the launcher's dedicated on-screen virtual-mouse buttons dispatch map clicks.
+- Launcher LMB down/up routes to `map_mouse_click`: holding LMB while moving the virtual cursor pans continuously; releasing stops the pan. Cursor over zoom +/- then launcher LMB activates the existing compact zoom hitboxes.
+- Launcher RMB down/up routes to `map_pointer_state`: the down edge opens the small context menu once; release does not activate it again.
+- Cancelled button touches now explicitly release all held virtual mouse buttons before cancelling touch state, avoiding a stuck map drag/menu state.
+- Cursor movement remains on the relative virtual-mouse path; no one-finger direct map drag was introduced.
+- `DEVELOPMENT_LOG.md` contains the implementation record. Validate Checks and the ARM64-v8a-only Android workflow on the latest branch head before offering an APK. Device verification on POCO F7 is still pending.
