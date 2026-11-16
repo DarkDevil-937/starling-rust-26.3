@@ -296,7 +296,7 @@ impl Game<'_> {
         let debug = std::mem::take(&mut tc.debug_requested) && !map_open;
         let settings = std::mem::take(&mut tc.settings_requested) && !map_open;
         if map_open && shown {
-            self.extras.map_pointer_state(map_pointer.0, map_pointer.1);
+            self.map_pointer_state(map_pointer.0, map_pointer.1);
         }
         if let Some(held_use) = tap
             && !map_open
