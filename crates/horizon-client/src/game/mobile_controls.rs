@@ -1953,7 +1953,14 @@ impl Game<'_> {
             self.mobile.controls.settings.virtual_mouse_sensitivity,
             !self.mobile.ui.mouse_held(),
         );
+        let previous_cursor = self.cursor;
         self.cursor = (position[0], position[1]);
+        // Fullscreen-map touches use the relative virtual-mouse path above,
+        // not android_touch's gameplay-control path. Keep the same held-LMB
+        // drag behavior here so moving the launcher cursor pans the map.
+        if self.extras.big_map && self.screen == Screen::Playing {
+            self.map_cursor_dragged(previous_cursor);
+        }
         self.handle_window_event(
             events,
             id,
