@@ -315,3 +315,20 @@ Read this section first; the sections above are historical.
   4. Confirm M and Esc close map.
   5. Check compact zoom buttons still respond.
 - Next priority after input fix is device feedback and a separate small Xaero-style zoom-button sizing pass; do not combine unrelated layout changes before cursor behaviour is verified.
+
+
+## Latest map click fix — 2026-11-16
+
+- Source commit: `0406f8e6af86f434d470e0392ea45761da66b852` — `Route virtual mouse clicks to fullscreen map`.
+- User-confirmed regression after the previous cursor fix: cursor movement works, but launcher LMB/RMB buttons and map zoom buttons do not respond to cursor clicks.
+- Diagnosis: virtual mouse click dispatch was gated behind `pad_in_menu()`; the fullscreen map is in `Screen::Playing`, so the click path returned before dispatch. Launcher mouse-button actions also needed an explicit map route.
+- Fix in `crates/horizon-client/src/game/mobile_controls.rs`:
+  - Allow virtual cursor clicks while the fullscreen map is open.
+  - Short cursor tap -> map left-click hit test (zoom buttons and waypoint selection).
+  - Stationary hold -> map right-click/context menu.
+  - Launcher on-screen LMB/RMB buttons -> direct map left/right handlers; LMB down/up starts/stops map drag and RMB opens the map context menu.
+  - Gameplay input remains isolated while map is open.
+- The compact 22px zoom button geometry is unchanged; this commit makes the existing hitboxes reachable by the virtual cursor.
+- Android ARM64-v8a run #117 / ID `43834058899` was in progress when this handoff was written. Checks and Android run outcomes must be checked before declaring completion. Do not install an earlier APK; only use the artifact from a successful ARM64-v8a run containing this commit.
+- Device validation still required on POCO F7: test cursor tap on zoom-in and zoom-out; launcher LMB hold + cursor movement pans; launcher RMB opens context menu; verify gameplay controls do not break/place/move while map is open.
+- See `DEVELOPMENT_LOG.md` for the dated implementation and CI record.
