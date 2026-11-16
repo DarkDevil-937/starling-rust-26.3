@@ -248,3 +248,13 @@ User feedback that drove this pass: the fullscreen map still had a row of on-map
 - No device verification: button size/placement, pointer size, menu placement and touch feel are approximations of Xaero, not measured on the POCO F7.
 - The pointer is positioned by touch/click/keys; the touch HUD's virtual-mouse stick is hidden on the map, so the stick cannot move the pointer there. Decide with the user whether the stick should stay available.
 - A documentation-only commit also triggers `android.yml`; do not mistake that run for a new source build.
+
+
+## 2026-11-16 — Repair OpenCode map-input commit CI failures
+
+- Preserved OpenCode/DeepSeek's source commit `a25d5935b33fbb6e2376f81f3adab8f94e51f8f3` and repaired it with follow-up commits; no rollback of the map interaction redesign.
+- Checks #104 (run ID `43823196096`) failed in offline research tooling test `test_screen_mouse_dragged_hook.py::test_drag_lifecycle_delta_and_cancelled_cursor`. The extracted standalone Rust fixture copied the cursor-move event branch, which now calls `map_cursor_dragged`, but the fixture's fake `Game` did not define that method.
+- Android #109 (run ID `43823196149`) failed compiling ARM64-v8a with Rust E0599 at `crates/horizon-client/src/game/mobile_controls.rs:299`: `map_pointer_state` is implemented on `Game`, not `ExtrasState`; the call incorrectly used `self.extras.map_pointer_state(...)`.
+- Fixes: call `self.map_pointer_state(...)` from the Game implementation; add a narrow `map_cursor_dragged` stub returning false to the extracted test fixture so that test continues to isolate native mouse-drag dispatch rather than map-pan behaviour.
+- Follow-up commits: `28657e689763b470ad813707933abbd895398ad8` (receiver fix), `febcfeaf5a3152d2893e938f6436068d7d38e482` (test fixture fix). Both preserve the preceding OpenCode commit as ancestry.
+- These fixes are not CI-verified until the new Checks and ARM64-v8a Android workflows complete. No APK from Android #109 was produced; only ARM64-v8a is in scope.
