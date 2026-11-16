@@ -1396,7 +1396,29 @@ impl Game<'_> {
     pub(super) fn draw_touch(&self, batch: &mut HudBatch) {
         #[cfg(target_os = "android")]
         if self.mobile_controls_enabled() {
+            // The fullscreen map keeps the launcher's touch controls visible;
+            // they are drawn here, above the map, because their pointer buttons
+            // click and drag it. The map's small zoom buttons and the game's own
+            // pointer are drawn last so the controls cannot cover them.
+            let map_open = self.extras.big_map && self.screen == Screen::Playing;
             self.mobile_draw(batch);
+            if map_open {
+                let atlas = &self.gui.atlas;
+                horizon_client::extras_hud::draw_map_zoom_buttons(batch, atlas);
+                let menu = self
+                    .extras
+                    .map_menu
+                    .as_ref()
+                    .map(|m| (m.x, m.y, m.waypoint));
+                horizon_client::extras_hud::draw_map_menu(batch, atlas, menu);
+                let cursor = self.map_cursor_gui();
+                horizon_client::android_control_ui::draw_pointer(
+                    batch,
+                    atlas,
+                    (cursor[0], cursor[1]),
+                    self.mobile.controls.settings.virtual_mouse_pointer_scale,
+                );
+            }
             return;
         }
         if !self.touch_shown() {

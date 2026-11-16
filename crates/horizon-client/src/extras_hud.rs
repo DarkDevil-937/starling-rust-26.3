@@ -324,10 +324,21 @@ pub fn draw_big_map(
     );
 
     // Small Xaero-style zoom buttons, bottom-right only.
-    let (zoom_in, zoom_out) = map_zoom_button_rects(batch.width, batch.height);
-    draw_map_button(batch, atlas, zoom_in, PLUS);
-    draw_map_button(batch, atlas, zoom_out, MINUS);
+    draw_map_zoom_buttons(batch, atlas);
 
+    let menu_hits = draw_map_menu(batch, atlas, menu);
+    // Only the small zoom buttons are map controls; everything else is keys/touch.
+    let (zoom_in, zoom_out) = map_zoom_button_rects(batch.width, batch.height);
+    ([zoom_in, zoom_out, [0.0; 4], [0.0; 4], [0.0; 4]], menu_hits)
+}
+
+/// The fullscreen map's right-click context menu and the item rectangles it
+/// covers. Public because the map draws it above the touch controls.
+pub fn draw_map_menu(
+    batch: &mut HudBatch,
+    atlas: &HudAtlas,
+    menu: Option<(f32, f32, Option<usize>)>,
+) -> Vec<([f32; 4], MapMenuAction)> {
     let mut menu_hits = Vec::new();
     if let Some((mx, my, waypoint)) = menu {
         let mut items = vec![("Create Waypoint", MapMenuAction::CreateWaypoint)];
@@ -369,9 +380,15 @@ pub fn draw_big_map(
             );
         }
     }
+    menu_hits
+}
 
-    // Only the small zoom buttons are map controls; everything else is keys/touch.
-    ([zoom_in, zoom_out, [0.0; 4], [0.0; 4], [0.0; 4]], menu_hits)
+/// The two small zoom buttons at the map's bottom-right. Public because the
+/// map draws them again above the touch controls so they stay visible.
+pub fn draw_map_zoom_buttons(batch: &mut HudBatch, atlas: &HudAtlas) {
+    let (zoom_in, zoom_out) = map_zoom_button_rects(batch.width, batch.height);
+    draw_map_button(batch, atlas, zoom_in, PLUS);
+    draw_map_button(batch, atlas, zoom_out, MINUS);
 }
 
 fn draw_map_button(batch: &mut HudBatch, atlas: &HudAtlas, r: [f32; 4], icon: &[&str]) {

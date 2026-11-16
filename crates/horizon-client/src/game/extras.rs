@@ -45,11 +45,12 @@ pub(super) struct ExtrasState {
     /// Fullscreen map zoom and pan.
     map_zoom: f32,
     map_pan: [f64; 2],
-    map_drag: Option<(u64, f32, f32)>,
-    /// Virtual map pointer in GUI coordinates, independent of the player.
-    map_cursor: Option<[f32; 2]>,
+    /// The left mouse button is held down on the fullscreen map (drag to pan).
+    map_left_held: bool,
+    /// The last touch-use button state, for the map's one-shot right click.
+    map_use_held: bool,
     /// Right-click context menu on the fullscreen map.
-    map_menu: Option<MapMenu>,
+    pub(super) map_menu: Option<MapMenu>,
 }
 /// CPU time the minimap's tiles may take per frame.
 const MINIMAP_BUDGET: Duration = Duration::from_micros(300);
@@ -271,34 +272,27 @@ impl Game<'_> {
             let [width, height] = self.touch_size();
             let scale = HudBatch::new([width, height]).scale;
             let bounds = [width as f32 / scale, height as f32 / scale];
-            let cursor = self
-                .extras
-                .map_cursor
-                .unwrap_or([bounds[0] * 0.5, bounds[1] * 0.5]);
+            let cursor = [self.cursor.0, self.cursor.1];
             let step = 18.0;
             match key {
                 KeyCode::ArrowLeft | KeyCode::KeyA => {
                     self.extras.map_menu = None;
-                    self.extras.map_cursor =
-                        Some([(cursor[0] - step).clamp(0.0, bounds[0]), cursor[1]]);
+                    self.cursor.0 = (cursor[0] - step).clamp(0.0, bounds[0]);
                     return true;
                 }
                 KeyCode::ArrowRight | KeyCode::KeyD => {
                     self.extras.map_menu = None;
-                    self.extras.map_cursor =
-                        Some([(cursor[0] + step).clamp(0.0, bounds[0]), cursor[1]]);
+                    self.cursor.0 = (cursor[0] + step).clamp(0.0, bounds[0]);
                     return true;
                 }
                 KeyCode::ArrowUp | KeyCode::KeyW => {
                     self.extras.map_menu = None;
-                    self.extras.map_cursor =
-                        Some([cursor[0], (cursor[1] - step).clamp(0.0, bounds[1])]);
+                    self.cursor.1 = (cursor[1] - step).clamp(0.0, bounds[1]);
                     return true;
                 }
                 KeyCode::ArrowDown | KeyCode::KeyS => {
                     self.extras.map_menu = None;
-                    self.extras.map_cursor =
-                        Some([cursor[0], (cursor[1] + step).clamp(0.0, bounds[1])]);
+                    self.cursor.1 = (cursor[1] + step).clamp(0.0, bounds[1]);
                     return true;
                 }
                 KeyCode::Equal | KeyCode::NumpadAdd => {
@@ -323,7 +317,6 @@ impl Game<'_> {
                 }
                 KeyCode::Enter | KeyCode::NumpadEnter => {
                     self.extras.map_menu = None;
-                    self.extras.map_cursor = Some(cursor);
                     self.map_add_waypoint_at_cursor(cursor, bounds);
                     return true;
                 }
@@ -337,7 +330,8 @@ impl Game<'_> {
                         return true;
                     }
                     self.extras.big_map = false;
-                    self.extras.map_drag = None;
+                    self.extras.map_left_held = false;
+                    self.extras.map_use_held = false;
                     return true;
                 }
                 _ => {}
@@ -345,131 +339,117 @@ impl Game<'_> {
         }
         match key {
             KeyCode::KeyM => {
-                self.extras.big_map = !self.extras.big_map;
-                self.extras.map_cursor = None;
-                self.extras.map_drag = None;
+                let opening = !self.extras.big_map;
+                self.extras.big_map = opening;
+                self.extras.map_left_held = false;
+                self.extras.map_use_held = false;
                 self.extras.map_menu = None;
+                if opening {
+                    // A menu leaves the cursor off-screen; start it in the middle
+                    // so the map's pointer is visible right away.
+                    let [width, height] = self.touch_size();
+                    let scale = HudBatch::new([width, height]).scale;
+                    let bounds = [width as f32 / scale, height as f32 / scale];
+                    if !(0.0..=bounds[0]).contains(&self.cursor.0)
+                        || !(0.0..=bounds[1]).contains(&self.cursor.1)
+                    {
+                        self.cursor = (bounds[0] * 0.5, bounds[1] * 0.5);
+                    }
+                }
                 true
             }
             KeyCode::Escape if self.extras.big_map => {
                 self.extras.map_menu = None;
                 self.extras.big_map = false;
-                self.extras.map_drag = None;
+                self.extras.map_left_held = false;
+                self.extras.map_use_held = false;
                 true
             }
             _ => false,
         }
     }
+    /// The fullscreen map's pointer is the game's own virtual mouse cursor, so
+    /// all map input moves `self.cursor` and the map reads it back.
+    pub(super) fn map_cursor_gui(&self) -> [f32; 2] {
+        [self.cursor.0, self.cursor.1]
+    }
+
+    /// A touch on the map: only the two small zoom buttons act; every other
+    /// touch moves the pointer through the normal touch pipeline, so panning
+    /// still requires the attack (left) button to be held.
     // The Android-only touch HUD calls this; host builds without that module enabled.
     #[allow(dead_code)]
-    /// Capture touches while the fullscreen map is open so they do not move the
-    /// player. Tapping positions the cursor (and selects a waypoint if hit);
-    /// dragging pans the map. Map actions use game controls/keys, not on-map buttons.
-    pub(super) fn fullscreen_map_touch(
-        &mut self,
-        id: u64,
-        phase: winit::event::TouchPhase,
-        px: f32,
-        py: f32,
-    ) -> bool {
+    pub(super) fn map_tap_gui(&mut self, x: f32, y: f32) -> bool {
         if !self.extras.big_map || self.screen != Screen::Playing {
             return false;
         }
         let [w, h] = self.touch_size();
         let scale = HudBatch::new([w, h]).scale;
-        let (x, y) = (px / scale, py / scale);
-        match phase {
-            winit::event::TouchPhase::Started => {
-                self.extras.map_cursor = Some([x, y]);
-                // Small Xaero-style zoom buttons (bottom-right).
-                let bounds = [w as f32 / scale, h as f32 / scale];
-                let (zoom_in, zoom_out) = extras_hud::map_zoom_button_rects(bounds[0], bounds[1]);
-                let inside =
-                    |r: [f32; 4]| x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3];
-                if inside(zoom_in) || inside(zoom_out) {
-                    self.extras.map_menu = None;
-                    let z = if self.extras.map_zoom > 0.0 {
-                        self.extras.map_zoom
-                    } else {
-                        DEFAULT_FULLSCREEN_MAP_ZOOM
-                    };
-                    self.extras.map_zoom = if inside(zoom_in) {
-                        (z * 0.8).clamp(0.125, 64.0)
-                    } else {
-                        (z / 0.8).clamp(0.125, 64.0)
-                    };
-                    self.extras.map_drag = None;
-                    return true;
-                }
-                if self.extras.map_menu.is_some() && self.map_handle_gui_click(x, y) {
-                    self.extras.map_drag = None;
-                    return true;
-                }
-                let zoom = if self.extras.map_zoom > 0.0 {
-                    self.extras.map_zoom
-                } else {
-                    DEFAULT_FULLSCREEN_MAP_ZOOM
-                };
-                let extent = f64::from(w.max(h) as f32 / scale);
-                let center = self.player.as_ref().map(|player| {
-                    (
-                        player.position.x + self.extras.map_pan[0],
-                        player.position.z + self.extras.map_pan[1],
-                    )
-                });
-                let selected = center.and_then(|center| {
-                    self.extras.map_waypoints.iter().enumerate().rev().find_map(
-                        |(index, waypoint)| {
-                            let wx = f64::from(w as f32 / scale * 0.5)
-                                + (waypoint.x - center.0) / f64::from(zoom) * extent
-                                    / minimap::SIZE as f64;
-                            let wy = f64::from(h as f32 / scale * 0.5)
-                                + (waypoint.z - center.1) / f64::from(zoom) * extent
-                                    / minimap::SIZE as f64;
-                            ((wx - f64::from(x)).abs() <= 14.0 && (wy - f64::from(y)).abs() <= 14.0)
-                                .then_some(index)
-                        },
-                    )
-                });
-                self.extras.selected_waypoint = selected;
-                self.extras.map_drag = if selected.is_some() {
-                    None
-                } else {
-                    Some((id, x, y))
-                };
-                true
-            }
-            winit::event::TouchPhase::Moved => {
-                if let Some((finger, ox, oy)) = self.extras.map_drag
-                    && finger == id
-                {
-                    let z = if self.extras.map_zoom > 0.0 {
-                        self.extras.map_zoom
-                    } else {
-                        DEFAULT_FULLSCREEN_MAP_ZOOM
-                    };
-                    // The square source texture is cover-scaled to the viewport.
-                    // Convert screen drag distance back to world blocks.
-                    let viewport = f64::from(w.max(h) as f32 / scale);
-                    let blocks_per_gui_pixel = f64::from(z) * minimap::SIZE as f64 / viewport;
-                    self.extras.map_pan[0] -= f64::from(x - ox) * blocks_per_gui_pixel;
-                    self.extras.map_pan[1] -= f64::from(y - oy) * blocks_per_gui_pixel;
-                    self.extras.map_drag = Some((id, x, y));
-                }
-                true
-            }
-            winit::event::TouchPhase::Ended | winit::event::TouchPhase::Cancelled => {
-                if self
-                    .extras
-                    .map_drag
-                    .is_some_and(|(finger, _, _)| finger == id)
-                {
-                    self.extras.map_drag = None;
-                }
-                true
+        let bounds = [w as f32 / scale, h as f32 / scale];
+        let (zoom_in, zoom_out) = extras_hud::map_zoom_button_rects(bounds[0], bounds[1]);
+        let inside = |r: [f32; 4]| x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3];
+        if !inside(zoom_in) && !inside(zoom_out) {
+            return false;
+        }
+        self.extras.map_menu = None;
+        let zoom = if self.extras.map_zoom > 0.0 {
+            self.extras.map_zoom
+        } else {
+            DEFAULT_FULLSCREEN_MAP_ZOOM
+        };
+        self.extras.map_zoom = if inside(zoom_in) {
+            (zoom * 0.8).clamp(0.125, 64.0)
+        } else {
+            (zoom / 0.8).clamp(0.125, 64.0)
+        };
+        true
+    }
+
+    /// The touch controls' pointer buttons while the map is open: the attack
+    /// button acts as the held left button (drag), the use button as a click.
+    // The Android-only touch HUD calls this; host builds without that module enabled.
+    #[allow(dead_code)]
+    pub(super) fn map_pointer_state(&mut self, left_pressed: bool, right_pressed: bool) {
+        if !self.extras.big_map || self.screen != Screen::Playing {
+            return;
+        }
+        self.extras.map_left_held = left_pressed && self.extras.map_menu.is_none();
+        if right_pressed && !self.extras.map_use_held {
+            if self.extras.map_menu.is_some() {
+                let cursor = self.map_cursor_gui();
+                self.map_handle_gui_click(cursor[0], cursor[1]);
+            } else {
+                self.map_open_context_menu();
             }
         }
+        self.extras.map_use_held = right_pressed;
     }
+
+    /// After the cursor moved: pan the map while the left button is held
+    /// (Xaero-style drag). Returns true when the move belonged to the map.
+    pub(super) fn map_cursor_dragged(&mut self, previous: (f32, f32)) -> bool {
+        if !self.extras.big_map || self.screen != Screen::Playing || self.title.is_some() {
+            return false;
+        }
+        if !self.extras.map_left_held || self.extras.map_menu.is_some() {
+            return false;
+        }
+        let [w, h] = self.touch_size();
+        let scale = HudBatch::new([w, h]).scale;
+        let zoom = if self.extras.map_zoom > 0.0 {
+            self.extras.map_zoom
+        } else {
+            DEFAULT_FULLSCREEN_MAP_ZOOM
+        };
+        // The square source texture is cover-scaled to the viewport.
+        // Convert pointer travel back to world blocks.
+        let viewport = f64::from(w.max(h) as f32 / scale);
+        let blocks_per_gui_pixel = f64::from(zoom) * minimap::SIZE as f64 / viewport;
+        self.extras.map_pan[0] -= f64::from(self.cursor.0 - previous.0) * blocks_per_gui_pixel;
+        self.extras.map_pan[1] -= f64::from(self.cursor.1 - previous.1) * blocks_per_gui_pixel;
+        true
+    }
+
     /// Refresh the minimap's tiles within the frame budget, recompose its
     /// image when the view or a tile changed, and queue the upload.
     fn update_minimap(&mut self) {
@@ -701,14 +681,7 @@ impl Game<'_> {
         if !self.extras.big_map || self.screen != Screen::Playing || self.title.is_some() {
             return false;
         }
-        let [w, h] = self.touch_size();
-        let scale = HudBatch::new([w, h]).scale;
-        let bounds = [w as f32 / scale, h as f32 / scale];
-        let cursor = self
-            .extras
-            .map_cursor
-            .unwrap_or([bounds[0] * 0.5, bounds[1] * 0.5]);
-        self.extras.map_cursor = Some(cursor);
+        let cursor = self.map_cursor_gui();
         self.extras.map_menu = Some(MapMenu {
             x: cursor[0],
             y: cursor[1],
@@ -729,10 +702,7 @@ impl Game<'_> {
             if x >= rx && x <= rx + rw && y >= ry && y <= ry + rh {
                 match action {
                     extras_hud::MapMenuAction::CreateWaypoint => {
-                        let cursor = self
-                            .extras
-                            .map_cursor
-                            .unwrap_or([bounds[0] * 0.5, bounds[1] * 0.5]);
+                        let cursor = self.map_cursor_gui();
                         self.map_add_waypoint_at_cursor(cursor, bounds);
                     }
                     extras_hud::MapMenuAction::DeleteWaypoint => {
@@ -755,71 +725,68 @@ impl Game<'_> {
         if !self.extras.big_map || self.screen != Screen::Playing || self.title.is_some() {
             return false;
         }
-        if !pressed {
-            return self.extras.map_menu.is_some();
-        }
         let [w, h] = self.touch_size();
         let scale = HudBatch::new([w, h]).scale;
-        let x = self.cursor.0 / scale;
-        let y = self.cursor.1 / scale;
+        let bounds = [w as f32 / scale, h as f32 / scale];
+        // The map's pointer is the game's cursor, in GUI coordinates.
+        let cursor = self.map_cursor_gui();
+        let (x, y) = (cursor[0], cursor[1]);
+        if !pressed {
+            let held = self.extras.map_left_held;
+            self.extras.map_left_held = false;
+            return held || self.extras.map_menu.is_some();
+        }
         if self.extras.map_menu.is_some() {
             self.map_handle_gui_click(x, y);
             return true;
         }
-        // Left click on map (when menu closed): update cursor/selection similar to touch tap.
-        if button == MouseButton::Left {
-            self.extras.map_cursor = Some([x, y]);
-            let bounds = [w as f32 / scale, h as f32 / scale];
-            let (zoom_in, zoom_out) = extras_hud::map_zoom_button_rects(bounds[0], bounds[1]);
-            let inside =
-                |r: [f32; 4]| x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3];
-            if inside(zoom_in) || inside(zoom_out) {
-                let z = if self.extras.map_zoom > 0.0 {
-                    self.extras.map_zoom
-                } else {
-                    DEFAULT_FULLSCREEN_MAP_ZOOM
-                };
-                self.extras.map_zoom = if inside(zoom_in) {
-                    (z * 0.8).clamp(0.125, 64.0)
-                } else {
-                    (z / 0.8).clamp(0.125, 64.0)
-                };
-                return true;
-            }
-            let zoom = if self.extras.map_zoom > 0.0 {
-                self.extras.map_zoom
+        if button != MouseButton::Left {
+            return false;
+        }
+        let (zoom_in, zoom_out) = extras_hud::map_zoom_button_rects(bounds[0], bounds[1]);
+        let inside = |r: [f32; 4]| x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3];
+        let zoom = if self.extras.map_zoom > 0.0 {
+            self.extras.map_zoom
+        } else {
+            DEFAULT_FULLSCREEN_MAP_ZOOM
+        };
+        if inside(zoom_in) || inside(zoom_out) {
+            self.extras.map_zoom = if inside(zoom_in) {
+                (zoom * 0.8).clamp(0.125, 64.0)
             } else {
-                DEFAULT_FULLSCREEN_MAP_ZOOM
+                (zoom / 0.8).clamp(0.125, 64.0)
             };
-            let extent =
-                f64::from(w as f32 / scale.max(1.0)).max(f64::from(h as f32 / scale.max(1.0)));
-            let center = self.player.as_ref().map(|player| {
-                (
-                    player.position.x + self.extras.map_pan[0],
-                    player.position.z + self.extras.map_pan[1],
-                )
-            });
-            let selected =
-                center.and_then(|center| {
-                    self.extras.map_waypoints.iter().enumerate().rev().find_map(
-                        |(index, waypoint)| {
-                            let wx = f64::from(w as f32 / scale * 0.5)
-                                + (waypoint.x - center.0) / f64::from(zoom) * extent
-                                    / minimap::SIZE as f64;
-                            let wy = f64::from(h as f32 / scale * 0.5)
-                                + (waypoint.z - center.1) / f64::from(zoom) * extent
-                                    / minimap::SIZE as f64;
-                            ((wx - f64::from(x)).abs() <= 14.0 && (wy - f64::from(y)).abs() <= 14.0)
-                                .then_some(index)
-                        },
-                    )
-                });
-            self.extras.selected_waypoint = selected;
-            // Don't start drag from mouse click here; wheel/keys handle most desktop use.
             return true;
         }
-        false
+        // A press selects the waypoint under the pointer and starts a drag:
+        // holding the left button and moving the cursor pans the map.
+        let extent = f64::from(bounds[0].max(bounds[1]));
+        let center = self.player.as_ref().map(|player| {
+            (
+                player.position.x + self.extras.map_pan[0],
+                player.position.z + self.extras.map_pan[1],
+            )
+        });
+        let selected = center.and_then(|center| {
+            self.extras
+                .map_waypoints
+                .iter()
+                .enumerate()
+                .rev()
+                .find_map(|(index, waypoint)| {
+                    let wx = f64::from(bounds[0] * 0.5)
+                        + (waypoint.x - center.0) / f64::from(zoom) * extent / minimap::SIZE as f64;
+                    let wy = f64::from(bounds[1] * 0.5)
+                        + (waypoint.z - center.1) / f64::from(zoom) * extent / minimap::SIZE as f64;
+                    ((wx - f64::from(x)).abs() <= 14.0 && (wy - f64::from(y)).abs() <= 14.0)
+                        .then_some(index)
+                })
+        });
+        self.extras.selected_waypoint = selected;
+        self.extras.map_left_held = true;
+        true
     }
+
     /// Mouse turning while zoomed.
     pub(super) fn zoom_turn_scale(&self) -> f64 {
         self.zoom_now().2
@@ -874,10 +841,7 @@ impl Game<'_> {
                 let py = self.player.as_ref().map_or(0.0, |p| p.position.y);
                 let coords = format!("X: {}  Y: {}  Z: {}", px.floor(), py.floor(), pz.floor());
                 let biome = self.map_biome_name();
-                let map_cursor = self
-                    .extras
-                    .map_cursor
-                    .unwrap_or([batch.width * 0.5, batch.height * 0.5]);
+                let map_cursor = self.map_cursor_gui();
                 let menu = self
                     .extras
                     .map_menu
@@ -895,17 +859,6 @@ impl Game<'_> {
                     map_zoom,
                     (map_cursor[0], map_cursor[1]),
                     menu,
-                );
-                // The game's own virtual mouse pointer over the map, at the map
-                // cursor: the same one the touch HUD shows while playing. The map
-                // needs it to aim waypoints, so it shows even while the setting is
-                // off (its scale still comes from the setting).
-                #[cfg(target_os = "android")]
-                horizon_client::android_control_ui::draw_pointer(
-                    batch,
-                    atlas,
-                    (map_cursor[0], map_cursor[1]),
-                    self.mobile.controls.settings.virtual_mouse_pointer_scale,
                 );
             } else {
                 extras_hud::draw_minimap(batch, atlas, &mut corners, &look);

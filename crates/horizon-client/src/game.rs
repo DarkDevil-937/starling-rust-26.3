@@ -17688,6 +17688,11 @@ impl Game<'_> {
                         let b = HudBatch::new([r.config.width, r.config.height]);
                         let previous = self.cursor;
                         self.cursor = (position.x as f32 / b.scale, position.y as f32 / b.scale);
+                        // Starling: holding the left button on the fullscreen map
+                        // drags it, Xaero-style.
+                        if self.map_cursor_dragged(previous) {
+                            return Ok(());
+                        }
                         if self.screen_mouse_dragged(previous) {
                             return Ok(());
                         }

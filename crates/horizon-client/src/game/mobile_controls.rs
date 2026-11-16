@@ -263,8 +263,17 @@ impl Game<'_> {
         } else {
             tc.poll_state()
         };
+        // The fullscreen map keeps the touch controls drawn, but the player does
+        // not move, aim or act while it is open. The attack button becomes the
+        // held left mouse button (drag the map) and use becomes right click.
+        let map_open = self.extras.big_map && self.screen == Screen::Playing;
+        let map_pointer = (state.triggers[1] > 0.5, state.triggers[0] > 0.5);
+        if map_open {
+            state = horizon_client::gamepad::PadState::default();
+        }
         self.mobile.touch_aim = tc.aim.or(self.mobile.touch_aim);
-        self.mobile.touch_shield = shown
+        self.mobile.touch_shield = !map_open
+            && shown
             && !in_menu
             && shield_available
             && if tc.settings.shield_button {
@@ -275,17 +284,23 @@ impl Game<'_> {
         if self.mobile.touch_shield {
             state.triggers[0] = 1.;
         }
-        if tc.aim.is_some() && tc.holding && (tc.holding_use || item_use || entity_use) {
+        if !map_open && tc.aim.is_some() && tc.holding && (tc.holding_use || item_use || entity_use)
+        {
             state.triggers = [1., 0.];
             tc.latch_use();
         }
         let tap = tc.take_tap();
 
-        let chat = std::mem::take(&mut tc.chat_requested);
-        let perspective = std::mem::take(&mut tc.perspective_requested);
-        let debug = std::mem::take(&mut tc.debug_requested);
-        let settings = std::mem::take(&mut tc.settings_requested);
-        if let Some(held_use) = tap {
+        let chat = std::mem::take(&mut tc.chat_requested) && !map_open;
+        let perspective = std::mem::take(&mut tc.perspective_requested) && !map_open;
+        let debug = std::mem::take(&mut tc.debug_requested) && !map_open;
+        let settings = std::mem::take(&mut tc.settings_requested) && !map_open;
+        if map_open && shown {
+            self.extras.map_pointer_state(map_pointer.0, map_pointer.1);
+        }
+        if let Some(held_use) = tap
+            && !map_open
+        {
             if self.pick_entity_hit().is_some()
                 && self.using.is_none()
                 && self.screen == Screen::Playing
@@ -327,9 +342,6 @@ impl Game<'_> {
     }
     pub(in crate::game) fn mobile_draw(&self, b: &mut HudBatch) {
         use horizon_client::android_control_ui as ui;
-        if self.extras.big_map {
-            return;
-        }
         if !self.has_touch()
             && !self.settings.keypad.enabled
             && self.mobile.controls.editor.is_none()
@@ -360,7 +372,8 @@ impl Game<'_> {
         }
         ui::draw_hud_editor(tc, b, &self.gui.atlas, &tc.settings.preset_id, None);
         self.mobile.ui.draw_keyboard(b, &self.gui.atlas);
-        if self.mobile.ui.virtual_mouse {
+        // The fullscreen map draws the same pointer itself, above the terrain.
+        if self.mobile.ui.virtual_mouse && !self.extras.big_map {
             ui::draw_pointer(
                 b,
                 &self.gui.atlas,
@@ -376,9 +389,8 @@ impl Game<'_> {
         id: WindowId,
     ) {
         self.mobile_init();
-        if self.fullscreen_map_touch(t.id, t.phase, t.location.x as f32, t.location.y as f32) {
-            return;
-        }
+        // The fullscreen map keeps the touch controls on screen but uses the
+        // game's own virtual mouse pointer, so touches are not captured here.
         let [w, h] = self.touch_size();
         let mut b = HudBatch::new([w, h]);
         let p = [t.location.x as f32 / b.scale, t.location.y as f32 / b.scale];
@@ -485,6 +497,15 @@ impl Game<'_> {
             return;
         }
         if t.phase == TouchPhase::Started
+            && self.extras.big_map
+            && self.screen == Screen::Playing
+            && self.map_tap_gui(p[0], p[1])
+        {
+            self.mobile.controls.ignore(t.id);
+            return;
+        }
+        if t.phase == TouchPhase::Started
+            && !self.extras.big_map
             && !self.mobile.controls.control_at_point(n)
             && let Some(slot) = horizon_client::android_controls::hotbar_slot(b.width, b.height, p)
         {
@@ -524,12 +545,16 @@ impl Game<'_> {
                 .settings
                 .virtual_mouse_sensitivity
                 .clamp(0.25, 4.);
+            let previous = self.cursor;
             self.cursor = (
                 (self.cursor.0 + delta[0] * b.width * speed).clamp(0., b.width),
                 (self.cursor.1 + delta[1] * b.height * speed).clamp(0., b.height),
             );
+            // Dragging the pointer with the left button held pans the map.
+            self.map_cursor_dragged(previous);
         }
-        if turn != [0., 0.] {
+        // The fullscreen map moves its pointer instead of turning the player.
+        if turn != [0., 0.] && !self.extras.big_map {
             self.tutorial.mouse(turn[0] as f64, turn[1] as f64);
             self.turn_player(turn[0] as f64 / 0.15, turn[1] as f64 / 0.15);
         }
@@ -722,9 +747,36 @@ impl Game<'_> {
         }
     }
 
+    /// Tokens that drive the pointer (mouse buttons), usable on the map.
+    fn map_pointer_token(name: &str) -> bool {
+        if name.starts_with("mouse.") {
+            return true;
+        }
+        if horizon_client::keybinds::mouse_button(name).is_some() {
+            return true;
+        }
+        name.strip_prefix("action:").is_some_and(|mapping| {
+            horizon_client::keybinds::mouse_button(horizon_client::keybinds::KeyBinds::default_of(
+                mapping,
+            ))
+            .is_some()
+        })
+    }
+
     pub(super) fn android_dispatch_custom_token(&mut self, name: &str, down: bool) {
         self.last_input = Instant::now();
         self.pad.in_use = true;
+        // The fullscreen map keeps the touch controls on screen, but only the
+        // pointer buttons act (they click and drag the map). Releases still
+        // dispatch so no key is left held.
+        if down
+            && self.extras.big_map
+            && self.screen == Screen::Playing
+            && !self.pad_in_menu()
+            && !Self::map_pointer_token(name)
+        {
+            return;
+        }
         if down && !self.pad_in_menu() && !self.captured && self.focused {
             self.capture(true);
         }
@@ -804,6 +856,10 @@ impl Game<'_> {
             return;
         }
         if name == "mouse.scroll.up" || name == "mouse.scroll.down" {
+            if down && self.extras.big_map {
+                self.map_mouse_wheel(if name == "mouse.scroll.up" { 1.0 } else { -1.0 });
+                return;
+            }
             if down {
                 let delta = if name == "mouse.scroll.up" { 8.0 } else { 1.0 };
                 let next = horizon_client::mouse::ScrollWheelHandler::next_selection(
@@ -1029,13 +1085,18 @@ impl Game<'_> {
                 .ui
                 .sync_viewport_cursor(&mut self.cursor, [b.width, b.height]);
         }
+        let map_open = self.extras.big_map
+            && self.screen == Screen::Playing
+            && self.title.is_none()
+            && self.mobile.controls.editor.is_none()
+            && !self.mobile.ui.floating_menu;
         let want = self.mobile.ui.compute_virtual_mouse_visibility(
             &self.mobile.controls,
             in_menu,
             self.ui.hide_gui,
             self.touch_shown(),
             self.captured,
-        );
+        ) || map_open;
         if self.mobile.ui.virtual_mouse != want {
             self.android_set_virtual_mouse(want);
         }
