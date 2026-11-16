@@ -375,3 +375,11 @@ Read this section first; the sections above are historical.
 - Fix in `mobile_controls.rs`: treat fullscreen-map mode as an enabled HUD-action context, while still keeping gameplay pad input blocked. Route on-screen key actions through `map_key_press()` during the map so they cannot trigger gameplay.
 - LMB press/release is routed to map drag/zoom handling; RMB press opens the context menu. Cursor movement remains on the virtual-mouse path.
 - Await CI and POCO F7 testing before marking this fixed.
+
+## Native-mod compilation failure diagnostics — 2026-11-16
+
+- User reports that compiling any selected native mod fails after the build starts, including the in-app GitHub route. Both routes share native_build.sh, so this points to the common build/injection pipeline, not necessarily one specific mod.
+- Error seen: Rust E0560, title::Button has no field named action. The current Button definition is in crates/horizon-client/src/title.rs and has no action field.
+- Commit 613d440680d303da43d85affeeccb8e3523abbee changes packaging/android/mod_build_server.py so plain Rust errors retain their source file/line and code excerpt instead of returning only the error headline. DEVELOPMENT_LOG.md records the change.
+- Important: this commit improves diagnostics only; it does not claim to fix E0560. Re-run one failing native-mod compile after the build service picks up this commit. Capture the expanded diagnostic from Starling; use its filename/line to patch the exact injected source. Do not ask the user to test every mod separately.
+- Keep Android builds ARM64-v8a only. Do not recommend downloading a library/APK until a successful build and artifact verification. POCO F7 device verification remains pending.
