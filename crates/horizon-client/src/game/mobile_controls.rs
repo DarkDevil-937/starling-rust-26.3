@@ -1224,6 +1224,17 @@ impl Game<'_> {
         } else {
             MouseButton::Left
         };
+        // The fullscreen map owns mouse input: route the launcher’s
+        // on-screen LMB/RMB buttons directly to map interactions instead of
+        // letting them reach gameplay or the pause/menu mouse path.
+        if self.extras.big_map && self.screen == Screen::Playing {
+            if right {
+                self.map_pointer_state(false, down);
+            } else {
+                self.map_mouse_click(button, down);
+            }
+            return Ok(());
+        }
         if matches!(self.screen, Screen::Inventory | Screen::Creative) {
             self.android_custom_mouse(button, down)
         } else {
@@ -1972,7 +1983,8 @@ impl Game<'_> {
             }
             return;
         }
-        if !self.pad_in_menu() {
+        let map_open = self.extras.big_map && self.screen == Screen::Playing;
+        if !map_open && !self.pad_in_menu() {
             return;
         }
         let Some(right) = self.mobile.ui.relative_click(true) else {
@@ -1983,7 +1995,18 @@ impl Game<'_> {
         } else {
             MouseButton::Left
         };
-        if matches!(self.screen, Screen::Inventory | Screen::Creative) {
+        if map_open {
+            // A short virtual-mouse tap is LMB (zoom buttons/waypoints); a
+            // stationary hold is RMB (the map context menu). Keep this path
+            // active in gameplay even though pad_in_menu() is false.
+            if right {
+                self.map_pointer_state(false, true);
+                self.map_pointer_state(false, false);
+            } else {
+                self.map_mouse_click(button, true);
+                self.map_mouse_click(button, false);
+            }
+        } else if matches!(self.screen, Screen::Inventory | Screen::Creative) {
             if let Err(e) = self
                 .android_custom_mouse(button, true)
                 .and_then(|()| self.android_custom_mouse(button, false))
