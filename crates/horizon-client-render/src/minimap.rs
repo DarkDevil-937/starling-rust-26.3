@@ -659,7 +659,8 @@ mod tests {
             25
         );
         assert_eq!(map.tiles[&(0, 0)].color[0], 11);
-        // A new layer rescans everything; unloaded chunks drop out.
+        // A new layer rescans everything; explored tiles of chunks the game
+        // unloaded stay cached for the persistent map.
         world.chunks.remove(&(2, 2));
         let n = map.update(
             &world,
@@ -670,7 +671,7 @@ mod tests {
             Duration::from_secs(1),
         );
         assert_eq!(n, 24);
-        assert!(!map.tiles.contains_key(&(2, 2)));
+        assert!(map.tiles.contains_key(&(2, 2)));
     }
 
     #[test]
@@ -716,24 +717,26 @@ mod tests {
         };
         assert!(map.compose(view));
         assert!(!map.compose(view), "the same view is not recomposed");
+        // The image is SIZE wide, so the centre is SIZE / 2.
+        let c = SIZE / 2;
         // North up: the stone is 10 pixels above the centre.
-        assert_eq!(pixel(&map, 64, 54), stone);
+        assert_eq!(pixel(&map, c, c - 10), stone);
         // Turning with the player facing east (yaw -90): north is to the left.
         view.rotate = true;
         view.yaw = -90.0;
         assert!(map.compose(view));
-        assert_eq!(pixel(&map, 54, 63), stone);
+        assert_eq!(pixel(&map, c - 10, c - 1), stone);
         let (nx, ny) = view.north();
         assert!((nx + 1.0).abs() < 1e-5 && ny.abs() < 1e-5, "{nx} {ny}");
         // Facing north, north is up.
         view.yaw = 180.0;
         map.compose(view);
-        assert_eq!(pixel(&map, 64, 54), stone);
+        assert_eq!(pixel(&map, c, c - 10), stone);
         // Round maps are transparent in the corners, framed at the edge.
         view.round = true;
         map.compose(view);
         assert_eq!(map.image[3], 0);
-        assert_eq!(&map.image[(64 * SIZE) * 4..(64 * SIZE) * 4 + 4], &BORDER);
+        assert_eq!(&map.image[(c * SIZE) * 4..(c * SIZE) * 4 + 4], &BORDER);
         // A small move recomposes only once it is visible.
         view.x += 0.1;
         assert!(!map.compose(view));
