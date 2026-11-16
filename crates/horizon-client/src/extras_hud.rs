@@ -193,10 +193,38 @@ pub fn draw_big_map(
     // A compact compass in the upper-right corner, separate from the controls.
     let compass_x = batch.width - 62.0;
     batch.fill(atlas, compass_x, 8.0, 52.0, 40.0, 0xC9000000);
-    batch.text(atlas, "N", compass_x + 23.0, 11.0, rgba(255, 255, 255, 255), true);
-    batch.text(atlas, "W", compass_x + 5.0, 25.0, rgba(205, 210, 220, 255), true);
-    batch.text(atlas, "E", compass_x + 42.0, 25.0, rgba(205, 210, 220, 255), true);
-    batch.text(atlas, "S", compass_x + 23.0, 34.0, rgba(205, 210, 220, 255), true);
+    batch.text(
+        atlas,
+        "N",
+        compass_x + 23.0,
+        11.0,
+        rgba(255, 255, 255, 255),
+        true,
+    );
+    batch.text(
+        atlas,
+        "W",
+        compass_x + 5.0,
+        25.0,
+        rgba(205, 210, 220, 255),
+        true,
+    );
+    batch.text(
+        atlas,
+        "E",
+        compass_x + 42.0,
+        25.0,
+        rgba(205, 210, 220, 255),
+        true,
+    );
+    batch.text(
+        atlas,
+        "S",
+        compass_x + 23.0,
+        34.0,
+        rgba(205, 210, 220, 255),
+        true,
+    );
 
     // Waypoint positions use the same world-to-screen transform as the terrain.
     let extent = batch.height.max(batch.width);
@@ -234,7 +262,14 @@ pub fn draw_big_map(
     let add_waypoint = [bx, pad + 3.0 * (MAP_BTN + 5.0), MAP_BTN, MAP_BTN];
     let remove_waypoint = [bx, pad + 4.0 * (MAP_BTN + 5.0), MAP_BTN, MAP_BTN];
 
-    batch.fill(atlas, bx - 4.0, pad - 4.0, MAP_BTN + 8.0, 5.0 * MAP_BTN + 4.0 * 5.0 + 8.0, 0xB8000000);
+    batch.fill(
+        atlas,
+        bx - 4.0,
+        pad - 4.0,
+        MAP_BTN + 8.0,
+        5.0 * MAP_BTN + 4.0 * 5.0 + 8.0,
+        0xB8000000,
+    );
     draw_map_button(batch, atlas, close, "X");
     draw_map_button(batch, atlas, zoom_in, "+");
     draw_map_button(batch, atlas, zoom_out, "-");
@@ -243,7 +278,14 @@ pub fn draw_big_map(
 
     let zoom_label = format!("{:.1}x", 1.0 / zoom.max(0.001));
     let zoom_w = HudBatch::text_width(atlas, &zoom_label) + 16.0;
-    batch.fill(atlas, (batch.width - zoom_w) * 0.5, batch.height - 22.0, zoom_w, 16.0, 0xC9000000);
+    batch.fill(
+        atlas,
+        (batch.width - zoom_w) * 0.5,
+        batch.height - 22.0,
+        zoom_w,
+        16.0,
+        0xC9000000,
+    );
     batch.text(
         atlas,
         &zoom_label,

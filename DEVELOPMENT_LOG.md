@@ -187,3 +187,12 @@ Actions #78 and #82 exposed stale workflow-presence tests after removing upstrea
 - This is a visual HUD pass only. It does not add biome-name detection, settings menu functionality, new map sampling/detail, or change terrain coverage. The left rail's waypoint count is informational.
 - CI validation is pending. Previous Android run #93 succeeded for ARM64-v8a on commit `274988e4a3dcb84e2cc58e5d984c0df7b26a0c45`; Checks #89 failed in two minimap tests. Those test expectations must be corrected separately after inspecting the exact assertions/logs. The #93 APK is not this new UI pass.
 - Device validation of the Xaero-style layout is pending; do not claim the UI is complete until user tests the new build on POCO F7.
+
+
+## 2026-11-16 — Xaero-style HUD formatting CI fix
+
+- Checked Android workflow #94 and Checks workflow #90 for commit `f09f8ed55c1c2eabe616210e6f93eddd838d1d2f`.
+- Android #94 completed successfully and published the verified `starling-apk-arm64-v8a` artifact (34,459,570 bytes).
+- Checks #90 failed only at `cargo +stable fmt --all -- --check`. The reported diffs were formatting in `crates/horizon-client/src/extras_hud.rs` (compass labels and two long `batch.fill` calls); the workflow did not reach Clippy or Rust tests.
+- Applied the exact rustfmt layout requested by the CI diff. No runtime behaviour was intentionally changed.
+- This formatting correction is committed separately and triggers fresh Checks and ARM64-v8a Android workflows. Await those results before treating the corrected branch head as fully validated.

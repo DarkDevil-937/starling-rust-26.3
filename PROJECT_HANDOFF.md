@@ -243,3 +243,11 @@ User reports explored chunks persist after restarting and map quality is now acc
 - A visual-only pass is being implemented in `crates/horizon-client/src/extras_hud.rs`: left rail and waypoint count, centred coordinate panel, compass, smaller controls and zoom label. Existing pan/zoom/cursor/waypoint behaviour and five control hitboxes are intended to remain intact.
 - Biome name and a functional settings menu are not implemented because the current draw call does not supply biome data and no settings action exists.
 - Current baseline: Android #93 succeeded for ARM64-v8a on `274988e4a3dcb84e2cc58e5d984c0df7b26a0c45`; Checks #89 failed two minimap tests. This new UI source must be separately checked and built. No device test of the reference-style UI yet.
+
+
+## 2026-11-16 — Workflow #94/#90 result and follow-up
+
+- Commit `f09f8ed55c1c2eabe616210e6f93eddd838d1d2f`: Android #94 succeeded; confirmed artifact `starling-apk-arm64-v8a` exists (34,459,570 bytes). Checks #90 failed at formatting check only.
+- Exact failure: `cargo +stable fmt --all -- --check` reported three formatting hunks in `crates/horizon-client/src/extras_hud.rs`; Clippy and Rust correctness tests were skipped because the formatting step stopped the job.
+- Applied rustfmt's exact requested layout to those three areas. No functional changes intended.
+- New commit should trigger Checks and ARM64-v8a Android workflows. Verify both fresh run conclusions and artifact list before recommending the new build. The #94 APK belongs to the previous source SHA and is not the formatting-fix commit.
