@@ -354,3 +354,8 @@ Read this section first; the sections above are historical.
 - Fix commit: `6e10a3612b2a67563be7d9be9e8b163c64852814`. `.github/workflows/android.yml` now uses `actions/cache@v4` to persist `target/android/debug.keystore` under `starling-preview-signing-key-v1`; later builds reuse the same signing key. A configured debug-keystore secret overrides the cached fallback.
 - This does not recover the previous ephemeral private key. The first install after this change may still require uninstalling the old Preview app once. Preserve game files first: check/backup `Internal storage/StarlingPreview` (the app's shared Preview folder when storage permission was granted). Do not assume app-private files survive uninstall.
 - Wait for successful ARM64-v8a build and successful cache save before using the new APK. Subsequent Preview APK updates should install over it without uninstalling.
+
+
+- To avoid forcing the user to uninstall the old app (and losing app-private files), the Preview variant was migrated to package ID `io.github.juanluci.starling.preview2`, label **Starling Preview (Stable)**. It installs alongside the old `.preview` package despite the signing mismatch.
+- Both `.preview` and `.preview2` resolve to the same shared-storage directory `StarlingPreview`, preserving access to game files there when storage permission is granted. App-private preferences/files do not transfer automatically. Keep the old app installed until the new build is tested.
+- Package migration commits: `827864706efd37eb2bd84e35a0fb3083e9aec5e8`, `e0d9fd41cc59b709a391cef52fe323882d9f4434`, workflow comment `1125e4ae73222f2749c440884b8d9dfb8b04427c`.
