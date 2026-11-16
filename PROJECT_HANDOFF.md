@@ -288,3 +288,12 @@ Read this section first; the sections above are historical.
 2. Adjust exact geometry values from that feedback rather than redesigning again.
 3. Open question for the user: should the virtual-mouse stick stay on screen while the map is open so the pointer can be moved without touching the map directly?
 4. Keep `DEVELOPMENT_LOG.md` updated with every change, run ID, and device result; the user requires full written process.
+
+
+## Current handoff — OpenCode map-input integration repair (2026-11-16)
+
+- Preserve the OpenCode/DeepSeek map redesign commit `a25d5935b33fbb6e2376f81f3adab8f94e51f8f3`; do not revert it.
+- CI for that commit: Checks #104 / run `43823196096` failed only in the extracted offline Python/Rust mouse-drag fixture because the newly inserted `self.map_cursor_dragged(previous)` call was absent from its fake `Game`. Android #109 / run `43823196149` failed ARM64-v8a compilation with E0599 because `map_pointer_state` is a `Game` method, but `mobile_controls.rs` called it through `self.extras`.
+- Applied narrow fixes: `mobile_controls.rs` now calls `self.map_pointer_state(...)`; `tests/test_screen_mouse_dragged_hook.py` adds a fixture-only stub returning false, keeping the test focused on native mouse drag dispatch.
+- Repair commits: `28657e689763b470ad813707933abbd895398ad8`, `febcfeaf5a3152d2893e938f6436068d7d38e482`, plus this handoff/log documentation commit.
+- Current branch head should be checked before further writes. Fresh Checks and Android workflows must both pass; Android must publish exact artifact `starling-apk-arm64-v8a` before recommending installation. Never build/recommend other ABIs. Device test remains pending.
