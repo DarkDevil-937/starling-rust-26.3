@@ -345,3 +345,12 @@ Read this section first; the sections above are historical.
 - Cancelled button touches now explicitly release all held virtual mouse buttons before cancelling touch state, avoiding a stuck map drag/menu state.
 - Cursor movement remains on the relative virtual-mouse path; no one-finger direct map drag was introduced.
 - `DEVELOPMENT_LOG.md` contains the implementation record. Validate Checks and the ARM64-v8a-only Android workflow on the latest branch head before offering an APK. Device verification on POCO F7 is still pending.
+
+
+## Preview APK update-signature issue — 2026-11-16
+
+- User's install dialog shows `INSTALL_FAILED_UPDATE_INCOMPATIBLE` for package `io.github.juanluci.starling.preview`.
+- Root cause confirmed from Android run #123 (`43845378625`) logs: the `STARLING_DEBUG_KEYSTORE_BASE64` Actions secret was empty. Each clean GitHub runner therefore generated a new `target/android/debug.keystore`, so successive Preview APKs had different signing certificates.
+- Fix commit: `6e10a3612b2a67563be7d9be9e8b163c64852814`. `.github/workflows/android.yml` now uses `actions/cache@v4` to persist `target/android/debug.keystore` under `starling-preview-signing-key-v1`; later builds reuse the same signing key. A configured debug-keystore secret overrides the cached fallback.
+- This does not recover the previous ephemeral private key. The first install after this change may still require uninstalling the old Preview app once. Preserve game files first: check/backup `Internal storage/StarlingPreview` (the app's shared Preview folder when storage permission was granted). Do not assume app-private files survive uninstall.
+- Wait for successful ARM64-v8a build and successful cache save before using the new APK. Subsequent Preview APK updates should install over it without uninstalling.
