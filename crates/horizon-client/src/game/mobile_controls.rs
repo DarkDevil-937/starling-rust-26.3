@@ -2027,7 +2027,7 @@ impl Game<'_> {
                 );
             }
         }
-        if !right {
+        if !map_open && !right {
             self.touch_field_click();
             if self.on_text_field() == Some(true) {
                 self.android_show_keyboard();
