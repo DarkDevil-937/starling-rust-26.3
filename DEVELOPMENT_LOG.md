@@ -295,3 +295,12 @@ User feedback that drove this pass: the fullscreen map still had a row of on-map
 - Also fixed cancelled launcher-button touches: any held virtual mouse button is explicitly released through the same map dispatcher before touch state is cancelled, preventing a stuck drag or stuck right-click state.
 - The existing cursor-relative movement path remains in place. Zoom-in/out still use the compact existing hitboxes and are activated by moving the cursor over a button and pressing launcher LMB.
 - Verification: CI and device test are pending for this source commit. Android target remains ARM64-v8a only. Do not install an older artifact or claim device verification until the latest ARM64 workflow succeeds and the POCO F7 test is completed.
+
+
+## 2026-11-16 — Stabilize Preview APK signing across CI runs
+
+- User reported Android install error `INSTALL_FAILED_UPDATE_INCOMPATIBLE`: the installed `io.github.juanluci.starling.preview` and new Preview APK had different signing certificates.
+- Verified the Android #123 job log (run `43845378625`): `STARLING_DEBUG_KEYSTORE_BASE64` was empty (`KEYSTORE:`), so `build_apk.py` generated a fresh `target/android/debug.keystore` on the ephemeral GitHub runner. That makes each CI APK use a different certificate and prevents in-place updates.
+- Workflow fix: `6e10a3612b2a67563be7d9be9e8b163c64852814` adds an `actions/cache@v4` restore/save for `target/android/debug.keystore` under stable cache key `starling-preview-signing-key-v1`. Once the first new build saves this keystore, later Preview builds on this branch reuse it. A configured `STARLING_DEBUG_KEYSTORE_BASE64` still takes precedence.
+- Important one-time migration: this cannot reproduce the private signing key from an already-published APK. The new cached key will differ from the currently installed ephemeral-key build, so one uninstall/reinstall may still be required. Before uninstalling, back up `Internal storage/StarlingPreview` if it exists; the app uses this shared-storage folder for Preview game files when storage access was granted. If game files are only in app-private storage, uninstalling may delete them.
+- CI/device verification of the new signing-cache workflow is pending. Do not install the artifact until its ARM64-v8a workflow succeeds and the cache-save step completes.
