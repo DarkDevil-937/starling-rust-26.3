@@ -355,7 +355,14 @@ pub fn draw_big_map(
         let height = items.len() as f32 * item_h + pad_y * 2.0;
         let x = mx.clamp(4.0, (batch.width - width - 4.0).max(4.0));
         let y = my.clamp(4.0, (batch.height - height - 4.0).max(4.0));
-        batch.fill(atlas, x - 1.0, y - 1.0, width + 2.0, height + 2.0, 0xFF7A7A7A);
+        batch.fill(
+            atlas,
+            x - 1.0,
+            y - 1.0,
+            width + 2.0,
+            height + 2.0,
+            0xFF7A7A7A,
+        );
         batch.fill(atlas, x, y, width, height, 0xF0101010);
         for (i, (label, action)) in items.iter().enumerate() {
             let iy = y + pad_y + i as f32 * item_h;

@@ -381,11 +381,9 @@ impl Game<'_> {
                 self.extras.map_cursor = Some([x, y]);
                 // Small Xaero-style zoom buttons (bottom-right).
                 let bounds = [w as f32 / scale, h as f32 / scale];
-                let (zoom_in, zoom_out) =
-                    extras_hud::map_zoom_button_rects(bounds[0], bounds[1]);
-                let inside = |r: [f32; 4]| {
-                    x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3]
-                };
+                let (zoom_in, zoom_out) = extras_hud::map_zoom_button_rects(bounds[0], bounds[1]);
+                let inside =
+                    |r: [f32; 4]| x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3];
                 if inside(zoom_in) || inside(zoom_out) {
                     self.extras.map_menu = None;
                     let z = if self.extras.map_zoom > 0.0 {
@@ -426,8 +424,7 @@ impl Game<'_> {
                             let wy = f64::from(h as f32 / scale * 0.5)
                                 + (waypoint.z - center.1) / f64::from(zoom) * extent
                                     / minimap::SIZE as f64;
-                            ((wx - f64::from(x)).abs() <= 14.0
-                                && (wy - f64::from(y)).abs() <= 14.0)
+                            ((wx - f64::from(x)).abs() <= 14.0 && (wy - f64::from(y)).abs() <= 14.0)
                                 .then_some(index)
                         },
                     )
@@ -771,11 +768,9 @@ impl Game<'_> {
         if button == MouseButton::Left {
             self.extras.map_cursor = Some([x, y]);
             let bounds = [w as f32 / scale, h as f32 / scale];
-            let (zoom_in, zoom_out) =
-                extras_hud::map_zoom_button_rects(bounds[0], bounds[1]);
-            let inside = |r: [f32; 4]| {
-                x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3]
-            };
+            let (zoom_in, zoom_out) = extras_hud::map_zoom_button_rects(bounds[0], bounds[1]);
+            let inside =
+                |r: [f32; 4]| x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3];
             if inside(zoom_in) || inside(zoom_out) {
                 let z = if self.extras.map_zoom > 0.0 {
                     self.extras.map_zoom
@@ -802,20 +797,21 @@ impl Game<'_> {
                     player.position.z + self.extras.map_pan[1],
                 )
             });
-            let selected = center.and_then(|center| {
-                self.extras.map_waypoints.iter().enumerate().rev().find_map(
-                    |(index, waypoint)| {
-                        let wx = f64::from(w as f32 / scale * 0.5)
-                            + (waypoint.x - center.0) / f64::from(zoom) * extent
-                                / minimap::SIZE as f64;
-                        let wy = f64::from(h as f32 / scale * 0.5)
-                            + (waypoint.z - center.1) / f64::from(zoom) * extent
-                                / minimap::SIZE as f64;
-                        ((wx - f64::from(x)).abs() <= 14.0 && (wy - f64::from(y)).abs() <= 14.0)
-                            .then_some(index)
-                    },
-                )
-            });
+            let selected =
+                center.and_then(|center| {
+                    self.extras.map_waypoints.iter().enumerate().rev().find_map(
+                        |(index, waypoint)| {
+                            let wx = f64::from(w as f32 / scale * 0.5)
+                                + (waypoint.x - center.0) / f64::from(zoom) * extent
+                                    / minimap::SIZE as f64;
+                            let wy = f64::from(h as f32 / scale * 0.5)
+                                + (waypoint.z - center.1) / f64::from(zoom) * extent
+                                    / minimap::SIZE as f64;
+                            ((wx - f64::from(x)).abs() <= 14.0 && (wy - f64::from(y)).abs() <= 14.0)
+                                .then_some(index)
+                        },
+                    )
+                });
             self.extras.selected_waypoint = selected;
             // Don't start drag from mouse click here; wheel/keys handle most desktop use.
             return true;
