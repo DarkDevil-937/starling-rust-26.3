@@ -17732,6 +17732,14 @@ impl Game<'_> {
                     }
                 }
                 WindowEvent::MouseWheel { delta, .. } => {
+                    // Starling: fullscreen map captures wheel for zoom (Xaero-like).
+                    let map_steps = match delta {
+                        MouseScrollDelta::LineDelta(_, y) => y,
+                        MouseScrollDelta::PixelDelta(p) => (p.y / 30.0) as f32,
+                    };
+                    if self.map_mouse_wheel(map_steps) {
+                        return Ok(());
+                    }
                     let (raw_x, raw_y) = match delta {
                         MouseScrollDelta::LineDelta(x, y) => (f64::from(x), f64::from(y)),
                         MouseScrollDelta::PixelDelta(p) => (p.x / 30.0, p.y / 30.0),
@@ -17750,10 +17758,6 @@ impl Game<'_> {
                         }) * wheel_sensitivity
                     };
                     let d = scaled(raw_y) as f32;
-                    // Starling: fullscreen map captures wheel for zoom (Xaero-like).
-                    if self.map_mouse_wheel(d) {
-                        return Ok(());
-                    }
                     // ScreenEvent.MouseScrolled.Pre: the open screen hears of
                     // the wheel before anything scrolls, and a cancelled turn
                     // scrolls nothing — no bundle, no list, slider or

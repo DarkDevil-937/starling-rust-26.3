@@ -794,7 +794,8 @@ impl Game<'_> {
             } else {
                 DEFAULT_FULLSCREEN_MAP_ZOOM
             };
-            let extent = f64::from(w as f32 / scale.max(1.0)).max(f64::from(h as f32 / scale.max(1.0)));
+            let extent =
+                f64::from(w as f32 / scale.max(1.0)).max(f64::from(h as f32 / scale.max(1.0)));
             let center = self.player.as_ref().map(|player| {
                 (
                     player.position.x + self.extras.map_pan[0],
