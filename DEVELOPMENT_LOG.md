@@ -308,3 +308,11 @@ User feedback that drove this pass: the fullscreen map still had a row of on-map
 
 - Follow-up migration improvement: instead of forcing an uninstall of the old `.preview` app, the Preview variant now uses package ID `io.github.juanluci.starling.preview2` and label **Starling Preview (Stable)**. It can install alongside the old app despite the old signing certificate. `StarlingActivity.sharedFolder()` maps both package suffixes to the same shared `/storage/emulated/0/StarlingPreview` folder, so game files already in that shared folder remain reusable. Source commits: `827864706efd37eb2bd84e35a0fb3083e9aec5e8` (package/label) and `e0d9fd41cc59b709a391cef52fe323882d9f4434` (shared-folder compatibility); workflow comment updated in `1125e4ae73222f2749c440884b8d9dfb8b04427c`.
 - This avoids uninstalling the old app and avoids deleting its private app data, but app-private data is not automatically shared with the new package. The shared `StarlingPreview` folder is reused when storage access was granted. The old app can be removed only after the new app has been opened and game files verified.
+
+
+## 2026-11-16 — Fix map panning on the launcher's virtual cursor path
+
+- Root cause: fullscreen-map free touches are deliberately routed through `android_virtual_touch()` so they move the launcher's relative virtual cursor. The existing `map_cursor_dragged(previous)` call was only in the separate `android_touch()` gameplay-control path, which the fullscreen map bypasses. Therefore the cursor moved but a held launcher LMB did not pan the map.
+- Fix commit: `3d41ac8437e9977f2112043491e30ca61b15ccc7`. `android_virtual_touch()` now snapshots the previous cursor and calls `map_cursor_dragged(previous_cursor)` after updating it whenever the fullscreen map is active. The existing `map_left_held` guard ensures panning happens only while launcher LMB is held and no map context menu is open.
+- Dedicated launcher LMB/RMB event routing remains unchanged: LMB down/up starts/stops map drag and RMB down opens the context menu. Direct one-finger map dragging was not introduced.
+- Verification pending on latest ARM64-v8a Android build and POCO F7 device test.
