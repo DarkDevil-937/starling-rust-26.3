@@ -107,6 +107,13 @@ pub fn draw_minimap(
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MapMenuAction {
+    CreateWaypoint,
+    DeleteWaypoint,
+    Close,
+}
+
 pub fn draw_big_map(
     batch: &mut HudBatch,
     atlas: &HudAtlas,
@@ -118,7 +125,8 @@ pub fn draw_big_map(
     center: (f64, f64),
     zoom: f32,
     cursor: (f32, f32),
-) -> [[f32; 4]; 5] {
+    menu: Option<(f32, f32, Option<usize>)>,
+) -> ([[f32; 4]; 5], Vec<([f32; 4], MapMenuAction)>) {
     batch.fill(atlas, 0.0, 0.0, batch.width, batch.height, BACKGROUND);
     // Fill the landscape viewport without distorting the square terrain
     // texture: crop the vertical edges (or horizontal edges on portrait).
@@ -250,29 +258,9 @@ pub fn draw_big_map(
         }
     }
 
-    let pad = 60.0;
-    let bx = batch.width - 8.0 - MAP_BTN;
-    let close = [bx, pad, MAP_BTN, MAP_BTN];
-    let zoom_in = [bx, pad + MAP_BTN + 5.0, MAP_BTN, MAP_BTN];
-    let zoom_out = [bx, pad + 2.0 * (MAP_BTN + 5.0), MAP_BTN, MAP_BTN];
-    let add_waypoint = [bx, pad + 3.0 * (MAP_BTN + 5.0), MAP_BTN, MAP_BTN];
-    let remove_waypoint = [bx, pad + 4.0 * (MAP_BTN + 5.0), MAP_BTN, MAP_BTN];
-
-    batch.fill(
-        atlas,
-        bx - 4.0,
-        pad - 4.0,
-        MAP_BTN + 8.0,
-        5.0 * MAP_BTN + 4.0 * 5.0 + 8.0,
-        0xB8000000,
-    );
-    draw_map_button(batch, atlas, close, CROSS);
-    draw_map_button(batch, atlas, zoom_in, PLUS);
-    draw_map_button(batch, atlas, zoom_out, MINUS);
-    draw_map_button(batch, atlas, add_waypoint, FLAG);
-    draw_map_button(batch, atlas, remove_waypoint, TRASH);
-
-    let zoom_label = format!("{:.1}x", 1.0 / zoom.max(0.001));
+    // No on-map buttons: map controls are driven by keyboard/game controls and
+    // context actions (Xaero-style), keeping the terrain unobstructed.
+    let zoom_label = format!("Zoom: {:.2}x", 1.0 / zoom.max(0.001));
     let zoom_w = HudBatch::text_width(atlas, &zoom_label) + 16.0;
     batch.fill(
         atlas,
@@ -291,8 +279,7 @@ pub fn draw_big_map(
         true,
     );
 
-    // Xaero-style virtual cursor: the hovered chunk is highlighted; arrow
-    // keys move it and Enter activates controls.
+    // Xaero-style virtual cursor: highlight the hovered chunk at cursor.
     let (cursor_x, cursor_y) = cursor;
     let extent = batch.width.max(batch.height);
     let per_block = extent / (crate::minimap::SIZE as f32 * zoom.max(0.001));
@@ -314,14 +301,50 @@ pub fn draw_big_map(
     batch.fill(atlas, sx + side - 1.0, sy, 1.0, side, 0xAAFFFFFF);
     batch.text(
         atlas,
-        &format!("X {:.1}  Z {:.1}", cursor_world_x, cursor_world_z),
-        14.0,
+        &format!("Cursor: X {:.0}  Z {:.0}", cursor_world_x, cursor_world_z),
+        52.0,
         batch.height - 18.0,
         rgba(255, 225, 150, 255),
         true,
     );
 
-    [close, zoom_in, zoom_out, add_waypoint, remove_waypoint]
+    let mut menu_hits = Vec::new();
+    if let Some((mx, my, waypoint)) = menu {
+        let mut items = vec![("Create Waypoint", MapMenuAction::CreateWaypoint)];
+        if waypoint.is_some() {
+            items.push(("Delete Waypoint", MapMenuAction::DeleteWaypoint));
+        }
+        items.push(("Close", MapMenuAction::Close));
+        let item_h = 16.0;
+        let pad_x = 8.0;
+        let pad_y = 6.0;
+        let width = items
+            .iter()
+            .map(|(label, _)| HudBatch::text_width(atlas, label))
+            .fold(0.0, f32::max)
+            + pad_x * 2.0;
+        let height = items.len() as f32 * item_h + pad_y * 2.0;
+        let x = mx.clamp(4.0, (batch.width - width - 4.0).max(4.0));
+        let y = my.clamp(4.0, (batch.height - height - 4.0).max(4.0));
+        batch.fill(atlas, x - 1.0, y - 1.0, width + 2.0, height + 2.0, 0xFF7A7A7A);
+        batch.fill(atlas, x, y, width, height, 0xF0101010);
+        for (i, (label, action)) in items.iter().enumerate() {
+            let iy = y + pad_y + i as f32 * item_h;
+            let rect = [x, iy - 1.0, width, item_h];
+            menu_hits.push((rect, *action));
+            batch.text(
+                atlas,
+                label,
+                x + pad_x,
+                iy + 3.0,
+                rgba(245, 248, 252, 255),
+                true,
+            );
+        }
+    }
+
+    // Empty control rects: input is handled by map keys/touch gestures, not buttons.
+    ([[0.0; 4]; 5], menu_hits)
 }
 
 fn draw_map_button(batch: &mut HudBatch, atlas: &HudAtlas, r: [f32; 4], icon: &[&str]) {

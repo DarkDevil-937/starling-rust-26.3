@@ -16615,6 +16615,10 @@ impl Game<'_> {
                 self.left = self.toggles.is_down(2);
             }
             MouseButton::Right => {
+                // Starling: right-click on the fullscreen map opens the context menu.
+                if pressed && self.map_open_context_menu() {
+                    return Ok(());
+                }
                 self.toggles
                     .button(3, pressed, false, self.settings.toggle_use);
                 self.right = self.toggles.is_down(3);
@@ -17746,6 +17750,10 @@ impl Game<'_> {
                         }) * wheel_sensitivity
                     };
                     let d = scaled(raw_y) as f32;
+                    // Starling: fullscreen map captures wheel for zoom (Xaero-like).
+                    if self.map_mouse_wheel(d) {
+                        return Ok(());
+                    }
                     // ScreenEvent.MouseScrolled.Pre: the open screen hears of
                     // the wheel before anything scrolls, and a cancelled turn
                     // scrolls nothing — no bundle, no list, slider or
@@ -18022,6 +18030,37 @@ impl Game<'_> {
                     }
                     match self.screen {
                         Screen::Playing => {
+                            // While the fullscreen map is open, use mouse for map UI
+                            // (cursor/menu/selection) instead of capturing for look.
+                            if self.extras.big_map {
+                                if self.map_mouse_click(button, pressed) {
+                                    return Ok(());
+                                }
+                                self.extras_mouse(button, pressed);
+                                // Still allow mapped mouse keys if needed, but avoid
+                                // normal attack/use side effects by routing through
+                                // play_mouse only when not consumed above.
+                                if !matches!(button, MouseButton::Left | MouseButton::Right) {
+                                    for mapped in self.settings.keys.translate_mouse_all(button) {
+                                        match mapped {
+                                            Err(b) => self.play_mouse(b, pressed)?,
+                                            Ok(k) if pressed => {
+                                                self.keys.insert(k);
+                                                self.key_pressed(k)?;
+                                            }
+                                            Ok(k) => {
+                                                self.keys.remove(&k);
+                                            }
+                                        }
+                                    }
+                                } else if pressed {
+                                    // Right-click is handled in play_mouse (context menu).
+                                    if button == MouseButton::Right {
+                                        self.play_mouse(button, pressed)?;
+                                    }
+                                }
+                                return Ok(());
+                            }
                             if pressed && !self.captured {
                                 self.capture(true);
                                 return Ok(());
