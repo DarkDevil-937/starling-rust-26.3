@@ -297,3 +297,21 @@ Read this section first; the sections above are historical.
 - Applied narrow fixes: `mobile_controls.rs` now calls `self.map_pointer_state(...)`; `tests/test_screen_mouse_dragged_hook.py` adds a fixture-only stub returning false, keeping the test focused on native mouse drag dispatch.
 - Repair commits: `28657e689763b470ad813707933abbd895398ad8`, `febcfeaf5a3152d2893e938f6436068d7d38e482`, plus this handoff/log documentation commit.
 - Current branch head should be checked before further writes. Fresh Checks and Android workflows must both pass; Android must publish exact artifact `starling-apk-arm64-v8a` before recommending installation. Never build/recommend other ABIs. Device test remains pending.
+
+
+## Latest map cursor input fix — 2026-11-16
+
+- Latest source commit: `ec11abcb949d459b4b252e55dd510f28bc5b4223` — `Route fullscreen map touches through virtual mouse`.
+- Documentation commit: `fab2974ec25eb437f754df6c2f1454076e64791c`.
+- User's confirmed intended map interaction: **keep the virtual mouse cursor**. Move the cursor around the map; hold left-click and move the cursor to pan. Do not switch to one-finger direct map panning.
+- Root cause: in fullscreen map gameplay, free-screen touches went through gameplay `TouchControls::update()`; its joystick/camera delta was being used as pointer movement. The proper `android_virtual_touch()` / `TouchUi::relative_touch()` path was only used while in menus, so the map cursor could stay stuck at its centre spawn point.
+- Fix: after `android_aux_touch()` gets first chance to process launcher button touches, free-screen touches while map is open now go through `android_virtual_touch()`. This updates `self.cursor` and dispatches `CursorMoved`, which feeds the existing left-held `map_cursor_dragged()` panning logic. Launcher buttons remain available because auxiliary button handling runs first.
+- This commit does not yet change zoom-button dimensions or overall map styling.
+- CI status: **not yet verified** for this source commit. Check fresh Checks + Android workflows. Android must be ARM64-v8a only and publish `starling-apk-arm64-v8a`.
+- Device test still required on POCO F7:
+  1. Open map; move virtual cursor away from centre in all directions.
+  2. Hold launcher left-click/Attack and move cursor; map should pan continuously.
+  3. Confirm player does not move, look, break or place blocks while map is open.
+  4. Confirm M and Esc close map.
+  5. Check compact zoom buttons still respond.
+- Next priority after input fix is device feedback and a separate small Xaero-style zoom-button sizing pass; do not combine unrelated layout changes before cursor behaviour is verified.
