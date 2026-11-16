@@ -332,28 +332,28 @@ impl Game<'_> {
         let side = extras_hud::MAP_BTN;
         let pad = 8.0;
         let bx = w as f32 / scale - pad - side;
-        let by = pad;
+        let by = 60.0;
         let hit = |top: f32| x >= bx && x <= bx + side && y >= top && y <= top + side;
         match phase {
             winit::event::TouchPhase::Started => {
                 if hit(by) {
                     self.extras.big_map = false;
                     self.extras.map_drag = None;
-                } else if hit(by + side + 6.0) {
+                } else if hit(by + side + 5.0) {
                     let z = if self.extras.map_zoom > 0.0 {
                         self.extras.map_zoom
                     } else {
                         DEFAULT_FULLSCREEN_MAP_ZOOM
                     };
                     self.extras.map_zoom = (z * 0.8).clamp(0.125, 64.0);
-                } else if hit(by + 2.0 * (side + 6.0)) {
+                } else if hit(by + 2.0 * (side + 5.0)) {
                     let z = if self.extras.map_zoom > 0.0 {
                         self.extras.map_zoom
                     } else {
                         DEFAULT_FULLSCREEN_MAP_ZOOM
                     };
                     self.extras.map_zoom = (z / 0.8).clamp(0.125, 64.0);
-                } else if hit(by + 3.0 * (side + 6.0)) {
+                } else if hit(by + 3.0 * (side + 5.0)) {
                     if let Some(player) = self.player.as_ref() {
                         let cursor = self
                             .extras
@@ -386,7 +386,7 @@ impl Game<'_> {
                         self.extras.selected_waypoint = Some(self.extras.map_waypoints.len() - 1);
                         self.save_map_waypoints();
                     }
-                } else if hit(by + 4.0 * (side + 6.0)) {
+                } else if hit(by + 4.0 * (side + 5.0)) {
                     let remove = self
                         .extras
                         .selected_waypoint
@@ -643,7 +643,9 @@ impl Game<'_> {
                     .player
                     .as_ref()
                     .map_or((view.x, view.z), |p| (p.position.x, p.position.z));
-                let coords = format!("X: {:.1}  Z: {:.1}", px, pz);
+                let py = self.player.as_ref().map_or(0.0, |p| p.position.y);
+                let coords = format!("X: {}  Y: {}  Z: {}", px.floor(), py.floor(), pz.floor());
+                let biome = self.map_biome_name();
                 let map_cursor = self
                     .extras
                     .map_cursor
@@ -653,6 +655,7 @@ impl Game<'_> {
                     atlas,
                     &look,
                     &coords,
+                    &biome,
                     &self.extras.map_waypoints,
                     self.extras.selected_waypoint,
                     (view.x, view.z),
@@ -666,6 +669,37 @@ impl Game<'_> {
         if !big {
             self.native_hud(batch, &mut corners);
         }
+    }
+    /// The biome at the player's feet, as "Plains" for the map screen.
+    fn map_biome_name(&self) -> String {
+        let Some(p) = self.player.as_ref() else {
+            return String::new();
+        };
+        let (x, y, z) = (
+            p.position.x.floor() as i32,
+            p.position.y.floor() as i32,
+            p.position.z.floor() as i32,
+        );
+        if y < self.world.bottom_y() || y >= self.world.top_y() {
+            return String::new();
+        }
+        let Some(chunk) = self.world.chunks.get(&(x >> 4, z >> 4)) else {
+            return String::new();
+        };
+        let Some(biome) = self.res.biomes().list.get(chunk.biome(x, y, z) as usize) else {
+            return String::new();
+        };
+        let name = biome.name.to_string();
+        let name = name.rsplit(':').next().unwrap_or("");
+        name.split('_')
+            .map(|w| {
+                let mut c = w.chars();
+                c.next()
+                    .map(|f| f.to_uppercase().collect::<String>() + c.as_str())
+                    .unwrap_or_default()
+            })
+            .collect::<Vec<_>>()
+            .join(" ")
     }
     /// The height the status effect icons take at the top right
     /// (`Hud.extractEffects`: beneficial at y 1, harmful at y 26).
