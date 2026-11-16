@@ -896,6 +896,17 @@ impl Game<'_> {
                     (map_cursor[0], map_cursor[1]),
                     menu,
                 );
+                // The game's own virtual mouse pointer over the map, at the map
+                // cursor: the same one the touch HUD shows while playing.
+                #[cfg(target_os = "android")]
+                if self.mobile.ui.virtual_mouse {
+                    horizon_client::android_control_ui::draw_pointer(
+                        batch,
+                        atlas,
+                        (map_cursor[0], map_cursor[1]),
+                        self.mobile.controls.settings.virtual_mouse_pointer_scale,
+                    );
+                }
             } else {
                 extras_hud::draw_minimap(batch, atlas, &mut corners, &look);
             }

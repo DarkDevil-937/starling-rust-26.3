@@ -323,15 +323,6 @@ pub fn draw_big_map(
         true,
     );
 
-    // Virtual mouse pointer: crosshair at the cursor (Xaero-like).
-    let hx = cursor_x.round();
-    let hy = cursor_y.round();
-    let cursor_color = rgba(255, 255, 255, 235);
-    batch.fill(atlas, hx - 5.0, hy, 3.0, 1.0, cursor_color);
-    batch.fill(atlas, hx + 3.0, hy, 3.0, 1.0, cursor_color);
-    batch.fill(atlas, hx, hy - 5.0, 1.0, 3.0, cursor_color);
-    batch.fill(atlas, hx, hy + 3.0, 1.0, 3.0, cursor_color);
-
     // Small Xaero-style zoom buttons, bottom-right only.
     let (zoom_in, zoom_out) = map_zoom_button_rects(batch.width, batch.height);
     draw_map_button(batch, atlas, zoom_in, PLUS);
