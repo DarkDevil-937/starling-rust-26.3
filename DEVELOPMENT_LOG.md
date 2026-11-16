@@ -316,3 +316,11 @@ User feedback that drove this pass: the fullscreen map still had a row of on-map
 - Fix commit: `3d41ac8437e9977f2112043491e30ca61b15ccc7`. `android_virtual_touch()` now snapshots the previous cursor and calls `map_cursor_dragged(previous_cursor)` after updating it whenever the fullscreen map is active. The existing `map_left_held` guard ensures panning happens only while launcher LMB is held and no map context menu is open.
 - Dedicated launcher LMB/RMB event routing remains unchanged: LMB down/up starts/stops map drag and RMB down opens the context menu. Direct one-finger map dragging was not introduced.
 - Verification pending on latest ARM64-v8a Android build and POCO F7 device test.
+
+
+## 2026-11-16 — Restore launcher HUD controls while fullscreen map is open
+
+- Root cause confirmed from the event path: `mobile_touch()` offers touches to `android_aux_touch()`, but the HUD action hit-test was passed only `pad_in_menu()`. During gameplay fullscreen map mode, `pad_in_menu()` is false, so the launcher HUD action resolver rejected its own on-screen mouse buttons and key buttons. This made launcher LMB/RMB and other HUD keys appear disabled even though the map-specific dispatch existed.
+- Fix: include fullscreen-map mode in the HUD action hit-test's menu-enabled flag. Launcher LMB/RMB now reach `android_menu_mouse()` and its map-specific press/release routing. HUD key actions are sent to `map_key_press()` while the map is open instead of gameplay key handling.
+- The map still blocks gameplay pad state; this change only restores the launcher's own HUD action hit-testing. No direct finger-drag behavior added.
+- Checks and ARM64-v8a Android build pending; device verification still required.
