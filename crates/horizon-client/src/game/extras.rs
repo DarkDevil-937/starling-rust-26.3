@@ -897,16 +897,16 @@ impl Game<'_> {
                     menu,
                 );
                 // The game's own virtual mouse pointer over the map, at the map
-                // cursor: the same one the touch HUD shows while playing.
+                // cursor: the same one the touch HUD shows while playing. The map
+                // needs it to aim waypoints, so it shows even while the setting is
+                // off (its scale still comes from the setting).
                 #[cfg(target_os = "android")]
-                if self.mobile.ui.virtual_mouse {
-                    horizon_client::android_control_ui::draw_pointer(
-                        batch,
-                        atlas,
-                        (map_cursor[0], map_cursor[1]),
-                        self.mobile.controls.settings.virtual_mouse_pointer_scale,
-                    );
-                }
+                horizon_client::android_control_ui::draw_pointer(
+                    batch,
+                    atlas,
+                    (map_cursor[0], map_cursor[1]),
+                    self.mobile.controls.settings.virtual_mouse_pointer_scale,
+                );
             } else {
                 extras_hud::draw_minimap(batch, atlas, &mut corners, &look);
             }
