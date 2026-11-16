@@ -379,6 +379,28 @@ impl Game<'_> {
         match phase {
             winit::event::TouchPhase::Started => {
                 self.extras.map_cursor = Some([x, y]);
+                // Small Xaero-style zoom buttons (bottom-right).
+                let bounds = [w as f32 / scale, h as f32 / scale];
+                let (zoom_in, zoom_out) =
+                    extras_hud::map_zoom_button_rects(bounds[0], bounds[1]);
+                let inside = |r: [f32; 4]| {
+                    x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3]
+                };
+                if inside(zoom_in) || inside(zoom_out) {
+                    self.extras.map_menu = None;
+                    let z = if self.extras.map_zoom > 0.0 {
+                        self.extras.map_zoom
+                    } else {
+                        DEFAULT_FULLSCREEN_MAP_ZOOM
+                    };
+                    self.extras.map_zoom = if inside(zoom_in) {
+                        (z * 0.8).clamp(0.125, 64.0)
+                    } else {
+                        (z / 0.8).clamp(0.125, 64.0)
+                    };
+                    self.extras.map_drag = None;
+                    return true;
+                }
                 if self.extras.map_menu.is_some() && self.map_handle_gui_click(x, y) {
                     self.extras.map_drag = None;
                     return true;
@@ -748,6 +770,25 @@ impl Game<'_> {
         // Left click on map (when menu closed): update cursor/selection similar to touch tap.
         if button == MouseButton::Left {
             self.extras.map_cursor = Some([x, y]);
+            let bounds = [w as f32 / scale, h as f32 / scale];
+            let (zoom_in, zoom_out) =
+                extras_hud::map_zoom_button_rects(bounds[0], bounds[1]);
+            let inside = |r: [f32; 4]| {
+                x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3]
+            };
+            if inside(zoom_in) || inside(zoom_out) {
+                let z = if self.extras.map_zoom > 0.0 {
+                    self.extras.map_zoom
+                } else {
+                    DEFAULT_FULLSCREEN_MAP_ZOOM
+                };
+                self.extras.map_zoom = if inside(zoom_in) {
+                    (z * 0.8).clamp(0.125, 64.0)
+                } else {
+                    (z / 0.8).clamp(0.125, 64.0)
+                };
+                return true;
+            }
             let zoom = if self.extras.map_zoom > 0.0 {
                 self.extras.map_zoom
             } else {

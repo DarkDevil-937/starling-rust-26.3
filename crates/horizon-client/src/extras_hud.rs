@@ -59,6 +59,21 @@ pub struct MapWaypoint {
 }
 
 pub const MAP_BTN: f32 = 30.0;
+/// Xaero-style small zoom buttons at the map's bottom-right corner.
+pub const MAP_ZOOM_BTN: f32 = 22.0;
+
+/// Rectangles of the small zoom-in and zoom-out buttons at the bottom-right.
+pub fn map_zoom_button_rects(width: f32, height: f32) -> ([f32; 4], [f32; 4]) {
+    let bx = width - 8.0 - MAP_ZOOM_BTN;
+    let zoom_out = [bx, height - 8.0 - MAP_ZOOM_BTN, MAP_ZOOM_BTN, MAP_ZOOM_BTN];
+    let zoom_in = [
+        bx,
+        height - 8.0 - 2.0 * MAP_ZOOM_BTN - 4.0,
+        MAP_ZOOM_BTN,
+        MAP_ZOOM_BTN,
+    ];
+    (zoom_in, zoom_out)
+}
 
 pub fn draw_minimap(
     batch: &mut HudBatch,
@@ -308,6 +323,20 @@ pub fn draw_big_map(
         true,
     );
 
+    // Virtual mouse pointer: crosshair at the cursor (Xaero-like).
+    let hx = cursor_x.round();
+    let hy = cursor_y.round();
+    let cursor_color = rgba(255, 255, 255, 235);
+    batch.fill(atlas, hx - 5.0, hy, 3.0, 1.0, cursor_color);
+    batch.fill(atlas, hx + 3.0, hy, 3.0, 1.0, cursor_color);
+    batch.fill(atlas, hx, hy - 5.0, 1.0, 3.0, cursor_color);
+    batch.fill(atlas, hx, hy + 3.0, 1.0, 3.0, cursor_color);
+
+    // Small Xaero-style zoom buttons, bottom-right only.
+    let (zoom_in, zoom_out) = map_zoom_button_rects(batch.width, batch.height);
+    draw_map_button(batch, atlas, zoom_in, PLUS);
+    draw_map_button(batch, atlas, zoom_out, MINUS);
+
     let mut menu_hits = Vec::new();
     if let Some((mx, my, waypoint)) = menu {
         let mut items = vec![("Create Waypoint", MapMenuAction::CreateWaypoint)];
@@ -343,8 +372,8 @@ pub fn draw_big_map(
         }
     }
 
-    // Empty control rects: input is handled by map keys/touch gestures, not buttons.
-    ([[0.0; 4]; 5], menu_hits)
+    // Only the small zoom buttons are map controls; everything else is keys/touch.
+    ([zoom_in, zoom_out, [0.0; 4], [0.0; 4], [0.0; 4]], menu_hits)
 }
 
 fn draw_map_button(batch: &mut HudBatch, atlas: &HudAtlas, r: [f32; 4], icon: &[&str]) {

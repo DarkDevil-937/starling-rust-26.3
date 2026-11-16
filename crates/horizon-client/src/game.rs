@@ -18053,11 +18053,10 @@ impl Game<'_> {
                                             }
                                         }
                                     }
-                                } else if pressed {
-                                    // Right-click is handled in play_mouse (context menu).
-                                    if button == MouseButton::Right {
-                                        self.play_mouse(button, pressed)?;
-                                    }
+                                } else {
+                                    // Left release / right press-release still go to
+                                    // play_mouse; its right press opens the context menu.
+                                    self.play_mouse(button, pressed)?;
                                 }
                                 return Ok(());
                             }
