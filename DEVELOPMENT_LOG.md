@@ -268,3 +268,18 @@ User feedback that drove this pass: the fullscreen map still had a row of on-map
 - In `crates/horizon-client/src/game/mobile_controls.rs`, after `android_aux_touch()` has first had the opportunity to consume launcher button touches, free-screen touches while the fullscreen map is open are now routed through `android_virtual_touch()` and returned. This preserves launcher button handling while making the real virtual cursor move. The existing `CursorMoved` event then reaches `map_cursor_dragged()`; when left-click is held, the map pans.
 - This is a targeted input-path fix, not a full map redesign. No UI geometry or zoom-button size changed in this commit.
 - CI and device verification: pending. Must verify Checks and ARM64-v8a Android workflow for this exact source commit, then have the user test cursor movement, left-click drag pan, gameplay-input blocking, and M/Esc close. Do not recommend an older APK as containing this fix.
+
+
+## 2026-11-16 — Restore virtual-mouse clicks on the fullscreen map
+
+- User tested the previous cursor-routing commit: the cursor now moves, but the launcher’s on-screen left/right mouse buttons and fullscreen zoom buttons did not respond to cursor clicks.
+- Root cause: `android_virtual_mouse_clicks()` returned early whenever `pad_in_menu()` was false. That is correct for menu-only virtual mouse clicks, but the fullscreen map is a gameplay screen, so its cursor clicks were silently discarded. The on-screen launcher mouse buttons also flowed through the generic menu mouse dispatcher rather than the map's own click handler.
+- Source commit: `0406f8e6af86f434d470e0392ea45761da66b852` — `Route virtual mouse clicks to fullscreen map`.
+- File changed: `crates/horizon-client/src/game/mobile_controls.rs`.
+  - `android_virtual_mouse_clicks()` now permits clicks while the fullscreen map is open even though `pad_in_menu()` is false.
+  - A short virtual-cursor tap is routed to `map_mouse_click(Left, ...)`, which activates the shared map hit-testing for zoom buttons and waypoint selection.
+  - A stationary long-hold is routed as right-click to `map_pointer_state`, opening/activating the map context menu.
+  - `android_menu_mouse()` now routes the launcher's on-screen left/right mouse buttons directly to the map's handlers while the map is open. Left-click down/up controls map dragging; right-click opens the map context menu. These clicks no longer leak into gameplay.
+- The map's existing zoom hit rectangles and 22px compact button geometry were not changed; the fix connects the virtual cursor click to the existing hit test.
+- Verification: Android run #117 (ID `43834058899`) was triggered on this exact source commit; status was `in_progress` at the time of this log update. Checks workflow status must also be recorded after checking. Do not install an APK until the ARM64-v8a workflow succeeds and its artifact is confirmed.
+- ABI scope: ARM64-v8a only. Device retest is pending; do not describe the click fix as device-confirmed until the user tests it.
