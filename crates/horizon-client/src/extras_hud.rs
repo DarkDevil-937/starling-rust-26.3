@@ -112,6 +112,7 @@ pub fn draw_big_map(
     atlas: &HudAtlas,
     look: &MinimapLook,
     coords: &str,
+    biome: &str,
     waypoints: &[MapWaypoint],
     selected_waypoint: Option<usize>,
     center: (f64, f64),
@@ -166,7 +167,15 @@ pub fn draw_big_map(
     // strip. Keep most of the screen available for terrain.
     batch.fill(atlas, 0.0, 0.0, 42.0, batch.height, 0xE8000000);
     batch.fill(atlas, 41.0, 0.0, 1.0, batch.height, 0x553A3A3A);
-    batch.text(atlas, "MAP", 10.0, 14.0, rgba(235, 240, 245, 255), true);
+    draw_icon(
+        batch,
+        atlas,
+        14.0,
+        10.0,
+        GEAR,
+        2.0,
+        rgba(235, 240, 245, 255),
+    );
     batch.fill(atlas, 10.0, 31.0, 22.0, 1.0, 0xFF_707070);
     batch.text(
         atlas,
@@ -179,52 +188,39 @@ pub fn draw_big_map(
 
     let info_w = (HudBatch::text_width(atlas, coords) + 24.0).clamp(150.0, 280.0);
     let info_x = (batch.width - info_w) * 0.5;
-    batch.fill(atlas, info_x, 8.0, info_w, 30.0, 0xD9000000);
-    batch.fill(atlas, info_x, 37.0, info_w, 1.0, 0x66777777);
+    batch.fill(atlas, info_x, 8.0, info_w, 32.0, 0xD9000000);
+    let coords_w = HudBatch::text_width(atlas, coords);
     batch.text(
         atlas,
         coords,
-        info_x + 12.0,
-        18.0,
+        (info_x + (info_w - coords_w) * 0.5).round(),
+        13.0,
         rgba(245, 248, 252, 255),
         true,
     );
+    let biome_w = HudBatch::text_width(atlas, biome);
+    batch.text(
+        atlas,
+        biome,
+        (info_x + (info_w - biome_w) * 0.5).round(),
+        26.0,
+        rgba(205, 210, 220, 255),
+        true,
+    );
 
-    // A compact compass in the upper-right corner, separate from the controls.
+    // Compass rose in the upper-right corner: a cross with N/E/S/W.
     let compass_x = batch.width - 62.0;
-    batch.fill(atlas, compass_x, 8.0, 52.0, 40.0, 0xC9000000);
-    batch.text(
-        atlas,
-        "N",
-        compass_x + 23.0,
-        11.0,
-        rgba(255, 255, 255, 255),
-        true,
-    );
-    batch.text(
-        atlas,
-        "W",
-        compass_x + 5.0,
-        25.0,
-        rgba(205, 210, 220, 255),
-        true,
-    );
-    batch.text(
-        atlas,
-        "E",
-        compass_x + 42.0,
-        25.0,
-        rgba(205, 210, 220, 255),
-        true,
-    );
-    batch.text(
-        atlas,
-        "S",
-        compass_x + 23.0,
-        34.0,
-        rgba(205, 210, 220, 255),
-        true,
-    );
+    batch.fill(atlas, compass_x, 8.0, 52.0, 44.0, 0xE6000000);
+    batch.fill(atlas, compass_x + 25.0, 20.0, 2.0, 20.0, 0xFF_9A9A9A);
+    batch.fill(atlas, compass_x + 16.0, 29.0, 20.0, 2.0, 0xFF_9A9A9A);
+    for (label, dx, dy, color) in [
+        ("N", 23.0, 10.0, rgba(255, 255, 255, 255)),
+        ("W", 7.0, 26.0, rgba(205, 210, 220, 255)),
+        ("E", 40.0, 26.0, rgba(205, 210, 220, 255)),
+        ("S", 23.0, 42.0, rgba(205, 210, 220, 255)),
+    ] {
+        batch.text(atlas, label, compass_x + dx, dy, color, true);
+    }
 
     // Waypoint positions use the same world-to-screen transform as the terrain.
     let extent = batch.height.max(batch.width);
@@ -254,7 +250,7 @@ pub fn draw_big_map(
         }
     }
 
-    let pad = 56.0;
+    let pad = 60.0;
     let bx = batch.width - 8.0 - MAP_BTN;
     let close = [bx, pad, MAP_BTN, MAP_BTN];
     let zoom_in = [bx, pad + MAP_BTN + 5.0, MAP_BTN, MAP_BTN];
@@ -270,11 +266,11 @@ pub fn draw_big_map(
         5.0 * MAP_BTN + 4.0 * 5.0 + 8.0,
         0xB8000000,
     );
-    draw_map_button(batch, atlas, close, "X");
-    draw_map_button(batch, atlas, zoom_in, "+");
-    draw_map_button(batch, atlas, zoom_out, "-");
-    draw_map_button(batch, atlas, add_waypoint, "W");
-    draw_map_button(batch, atlas, remove_waypoint, "D");
+    draw_map_button(batch, atlas, close, CROSS);
+    draw_map_button(batch, atlas, zoom_in, PLUS);
+    draw_map_button(batch, atlas, zoom_out, MINUS);
+    draw_map_button(batch, atlas, add_waypoint, FLAG);
+    draw_map_button(batch, atlas, remove_waypoint, TRASH);
 
     let zoom_label = format!("{:.1}x", 1.0 / zoom.max(0.001));
     let zoom_w = HudBatch::text_width(atlas, &zoom_label) + 16.0;
@@ -295,33 +291,27 @@ pub fn draw_big_map(
         true,
     );
 
-    // Xaero-style virtual cursor; arrow keys move it and Enter activates controls.
+    // Xaero-style virtual cursor: the hovered chunk is highlighted; arrow
+    // keys move it and Enter activates controls.
     let (cursor_x, cursor_y) = cursor;
-    batch.fill(
-        atlas,
-        cursor_x - 10.0,
-        cursor_y - 1.0,
-        20.0,
-        2.0,
-        0xFF_101820,
-    );
-    batch.fill(
-        atlas,
-        cursor_x - 1.0,
-        cursor_y - 10.0,
-        2.0,
-        20.0,
-        0xFF_101820,
-    );
-    batch.fill(atlas, cursor_x - 8.0, cursor_y - 1.0, 16.0, 1.0, 0xFFFFE17A);
-    batch.fill(atlas, cursor_x - 1.0, cursor_y - 8.0, 1.0, 16.0, 0xFFFFE17A);
     let extent = batch.width.max(batch.height);
+    let per_block = extent / (crate::minimap::SIZE as f32 * zoom.max(0.001));
     let cursor_world_x = center.0
         + f64::from(cursor_x - batch.width * 0.5) * f64::from(zoom) * crate::minimap::SIZE as f64
             / f64::from(extent);
     let cursor_world_z = center.1
         + f64::from(cursor_y - batch.height * 0.5) * f64::from(zoom) * crate::minimap::SIZE as f64
             / f64::from(extent);
+    let chunk_x = (cursor_world_x / 16.0).floor() * 16.0;
+    let chunk_z = (cursor_world_z / 16.0).floor() * 16.0;
+    let sx = batch.width * 0.5 + ((chunk_x - center.0) as f32) * per_block;
+    let sy = batch.height * 0.5 + ((chunk_z - center.1) as f32) * per_block;
+    let side = 16.0 * per_block;
+    batch.fill(atlas, sx, sy, side, side, 0x44FFFFFF);
+    batch.fill(atlas, sx, sy, side, 1.0, 0xAAFFFFFF);
+    batch.fill(atlas, sx, sy + side - 1.0, side, 1.0, 0xAAFFFFFF);
+    batch.fill(atlas, sx, sy, 1.0, side, 0xAAFFFFFF);
+    batch.fill(atlas, sx + side - 1.0, sy, 1.0, side, 0xAAFFFFFF);
     batch.text(
         atlas,
         &format!("X {:.1}  Z {:.1}", cursor_world_x, cursor_world_z),
@@ -334,7 +324,7 @@ pub fn draw_big_map(
     [close, zoom_in, zoom_out, add_waypoint, remove_waypoint]
 }
 
-fn draw_map_button(batch: &mut HudBatch, atlas: &HudAtlas, r: [f32; 4], label: &str) {
+fn draw_map_button(batch: &mut HudBatch, atlas: &HudAtlas, r: [f32; 4], icon: &[&str]) {
     let [x, y, w, h] = r;
     // Flat, compact controls on a dark Xaero-like toolbar.
     batch.fill(atlas, x, y, w, h, 0xE6000000);
@@ -342,17 +332,62 @@ fn draw_map_button(batch: &mut HudBatch, atlas: &HudAtlas, r: [f32; 4], label: &
     batch.fill(atlas, x, y + h - 1.0, w, 1.0, 0xFF_777777);
     batch.fill(atlas, x, y, 1.0, h, 0xFF_777777);
     batch.fill(atlas, x + w - 1.0, y, 1.0, h, 0xFF_777777);
-    let tw = HudBatch::text_width(atlas, label);
-    let tx = x + (w - tw) / 2.0;
-    let ty = y + (h - 8.0) / 2.0 - 1.0;
-    batch.text(
+    let icon_w = icon.first().map_or(0, |row| row.len()) as f32 * 2.0;
+    let icon_h = icon.len() as f32 * 2.0;
+    draw_icon(
+        batch,
         atlas,
-        label,
-        tx.round(),
-        ty.round(),
+        (x + (w - icon_w) / 2.0).round(),
+        (y + (h - icon_h) / 2.0).round(),
+        icon,
+        2.0,
         rgba(245, 248, 252, 255),
-        true,
     );
+}
+
+/// 7x7 pixel icons; `#` cells are drawn.
+const GEAR: &[&str] = &[
+    "#.###.#", "#######", ".##.##.", "###.###", ".##.##.", "#######", "#.###.#",
+];
+const CROSS: &[&str] = &[
+    "##...##", "###.###", ".#####.", "..###..", ".#####.", "###.###", "##...##",
+];
+const PLUS: &[&str] = &[
+    "...#...", "...#...", "...#...", "#######", "...#...", "...#...", "...#...",
+];
+const MINUS: &[&str] = &[
+    ".......", ".......", ".......", "#######", ".......", ".......", ".......",
+];
+const FLAG: &[&str] = &[
+    "#......", "#####..", "######.", "#####..", "#......", "#......", "#......",
+];
+const TRASH: &[&str] = &[
+    "..###..", "#######", ".#.#.#.", ".#.#.#.", ".#.#.#.", ".#.#.#.", ".#####.",
+];
+
+fn draw_icon(
+    batch: &mut HudBatch,
+    atlas: &HudAtlas,
+    x: f32,
+    y: f32,
+    icon: &[&str],
+    cell: f32,
+    color: u32,
+) {
+    for (row, line) in icon.iter().enumerate() {
+        for (col, c) in line.bytes().enumerate() {
+            if c == b'#' {
+                batch.fill(
+                    atlas,
+                    x + col as f32 * cell,
+                    y + row as f32 * cell,
+                    cell,
+                    cell,
+                    color,
+                );
+            }
+        }
+    }
 }
 
 fn draw_map_at(
